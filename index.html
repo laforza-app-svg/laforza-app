@@ -1624,49 +1624,53 @@ function selectSettimana(id) {
 
 function renderCalGrid(settimanaId) {
   var rows = S.calendario.filter(function(r){ return r.settimana_id === settimanaId; });
-  if (!rows || rows.length === 0) return '<p style="color:var(--gray3);padding:20px">Nessun dato per questa settimana.</p>';
+  if (!rows || rows.length === 0) return '<p style="color:var(--gray3);padding:20px;text-align:center">Nessun dato per questa settimana.</p>';
 
-  // Struttura: raggruppa per zona/mansione e giorno
-  // Ogni riga = { zona, giorno, utente_nome }
-  var GIORNI_ORDER = ['LUN','MAR','MER','GIO','VEN','SAB','DOM'];
-  
-  // Costruisci mappa zona -> giorno -> [utenti]
-  var zonaMap = {};
+  var GIORNI = ['LUN','MAR','MER','GIO','VEN','SAB','DOM'];
+  var GIORNI_KEYS = ['lun','mar','mer','gio','ven','sab','dom'];
+
+  // Costruisci mappa mansione -> giorno -> [utenti]
+  // Ogni row ha: utente_nome, lun, mar, mer, gio, ven, sab, dom (pipe-separated)
+  var mansioneMap = {}; // mansione -> {LUN:[],MAR:[],...}
+
   rows.forEach(function(r) {
-    var zona = r.zona || r.mansione_id || '—';
-    var giornoRaw = (r.giorno||'').toString().trim();
-    var giorniNum = {'0':'DOM','1':'LUN','2':'MAR','3':'MER','4':'GIO','5':'VEN','6':'SAB'};
-    var giorniNom = {'DOMENICA':'DOM','LUNEDI':'LUN','MARTEDI':'MAR','MERCOLEDI':'MER',
-                     'GIOVEDI':'GIO','VENERDI':'VEN','SABATO':'SAB',
-                     'DOM':'DOM','LUN':'LUN','MAR':'MAR','MER':'MER',
-                     'GIO':'GIO','VEN':'VEN','SAB':'SAB'};
-    var giorno = giorniNum[giornoRaw] || giorniNom[giornoRaw.toUpperCase()] || giornoRaw.toUpperCase().substring(0,3);
-    if (!zonaMap[zona]) zonaMap[zona] = {};
-    if (!zonaMap[zona][giorno]) zonaMap[zona][giorno] = [];
     var nome = r.utente_nome || r.utente_id || '';
-    if (nome && zonaMap[zona][giorno].indexOf(nome) < 0) {
-      zonaMap[zona][giorno].push(nome);
-    }
+    GIORNI.forEach(function(g, gi) {
+      var key = GIORNI_KEYS[gi];
+      var val = r[key] || '';
+      if (!val || val === '—') return;
+      var mansioni = val.split('|').filter(function(m){ return m && m.trim(); });
+      mansioni.forEach(function(mans) {
+        mans = mans.trim();
+        if (!mans) return;
+        if (!mansioneMap[mans]) {
+          mansioneMap[mans] = {LUN:[],MAR:[],MER:[],GIO:[],VEN:[],SAB:[],DOM:[]};
+        }
+        if (nome && mansioneMap[mans][g].indexOf(nome) < 0) {
+          mansioneMap[mans][g].push(nome);
+        }
+      });
+    });
   });
 
-  var zone = Object.keys(zonaMap).sort();
-  
+  var mansioni = Object.keys(mansioneMap).sort();
+  if (mansioni.length === 0) return '<p style="color:var(--gray3);padding:20px;text-align:center">Nessuna mansione assegnata.</p>';
+
   var html = '<div class="table-wrap"><table class="cal-table">';
-  // Header
-  html += '<thead><tr><th class="cal-head" style="min-width:120px">MANSIONE / ZONA</th>';
-  GIORNI_ORDER.forEach(function(g){ html += '<th class="cal-head">' + g + '</th>'; });
+  html += '<thead><tr><th class="cal-head" style="min-width:130px">MANSIONE / ZONA</th>';
+  GIORNI.forEach(function(g){ html += '<th class="cal-head">'+g+'</th>'; });
   html += '</tr></thead><tbody>';
 
-  zone.forEach(function(zona, zi) {
-    html += '<tr' + (zi%2===0 ? ' style="background:var(--gray1)"' : '') + '>';
-    html += '<td class="cal-name"><b>' + zona + '</b></td>';
-    GIORNI_ORDER.forEach(function(g) {
-      var utenti = zonaMap[zona][g] || [];
+  mansioni.forEach(function(mans, zi) {
+    html += '<tr'+(zi%2===0?' style="background:var(--gray1)"':'')+'>'; 
+    html += '<td class="cal-name"><b>'+mans+'</b></td>';
+    GIORNI.forEach(function(g) {
+      var utenti = mansioneMap[mans][g] || [];
       if (utenti.length === 0) {
         html += '<td class="cal-cell" style="color:var(--gray2);text-align:center">·</td>';
       } else {
-        html += '<td class="cal-cell">' +
-          utenti.map(function(u){ return '<div style="font-size:.72rem;padding:1px 0">'+u+'</div>'; }).join('') +
+        html += '<td class="cal-cell">'+
+          utenti.map(function(u){ return '<div style="font-size:.72rem;padding:1px 0">'+u+'</div>'; }).join('')+
           '</td>';
       }
     });
