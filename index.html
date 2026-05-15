@@ -682,6 +682,10 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
              onkeydown="if(event.key==='Enter')doLogin()">
     </div>
 
+    <label style="display:flex;align-items:center;gap:8px;margin:4px 0 8px;cursor:pointer;font-size:.82rem;color:#5A5752;text-align:left">
+      <input type="checkbox" id="loginRemember" checked style="accent-color:#1A3A5C;width:15px;height:15px">
+      Ricordami su questo dispositivo
+    </label>
     <button class="login-btn" onclick="doLogin()" id="loginBtn">Accedi</button>
     <div class="login-error" id="loginError"></div>
 
@@ -1038,7 +1042,23 @@ function mockData(action) {
 //  INIT
 // ═══════════════════════════════════════════════════════════════════
 window.addEventListener('load', function() {
-  // App starts with login screen — data loads after successful login
+  // Controlla se c'è una sessione salvata (max 30 giorni)
+  try {
+    var saved = localStorage.getItem('lf_session');
+    if (saved) {
+      var sess = JSON.parse(saved);
+      var age  = Date.now() - (sess.ts || 0);
+      var MAX  = 30 * 24 * 60 * 60 * 1000; // 30 giorni
+      if (age < MAX && sess.username) {
+        currentUser = sess;
+        openApp(sess);
+        return;
+      } else {
+        localStorage.removeItem('lf_session');
+      }
+    }
+  } catch(e) {}
+  // Nessuna sessione — mostra login
   document.getElementById('loginUser').focus();
 });
 
@@ -2874,16 +2894,17 @@ function doLogin() {
     .then(function(res) {
       if (res && res.ok) {
         currentUser = res;
-        document.getElementById('loginOverlay').classList.remove('show');
-        // Show main app
-        document.getElementById('mainApp').style.display = 'flex';
-        // Show user badge in sidebar
-        document.getElementById('userBadge').style.display = 'flex';
-        document.getElementById('userName').textContent = res.nome || res.username;
-        document.getElementById('userRole').textContent = res.ruolo === 'admin' ? 'Amministratore' : 'Operatore';
-        document.getElementById('userAvatar').textContent = (res.nome||res.username).charAt(0).toUpperCase();
-        // Load all data
-        loadAll().then(function(){ showPage('dashboard'); });
+        // Salva sessione se "Ricordami" è spuntato
+        var remember = document.getElementById('loginRemember');
+        if (remember && remember.checked) {
+          try {
+            localStorage.setItem('lf_session', JSON.stringify({
+              username: res.username, nome: res.nome, ruolo: res.ruolo,
+              ts: Date.now()
+            }));
+          } catch(e) {}
+        }
+        openApp(res);
       } else {
         showErr((res && res.error) ? res.error : 'Username o password errati');
         btn.textContent = 'Accedi';
@@ -2898,9 +2919,20 @@ function doLogin() {
     });
 }
 
+function openApp(res) {
+  document.getElementById('loginOverlay').classList.remove('show');
+  document.getElementById('mainApp').style.display = 'flex';
+  document.getElementById('userBadge').style.display = 'flex';
+  document.getElementById('userName').textContent = res.nome || res.username;
+  document.getElementById('userRole').textContent = res.ruolo === 'admin' ? 'Amministratore' : 'Operatore';
+  document.getElementById('userAvatar').textContent = (res.nome||res.username).charAt(0).toUpperCase();
+  loadAll().then(function(){ showPage('dashboard'); });
+}
+
 function doLogout() {
   if (!confirm('Vuoi uscire dall\'app?')) return;
   currentUser = null;
+  try { localStorage.removeItem('lf_session'); } catch(e) {}
   document.getElementById('mainApp').style.display = 'none';
   document.getElementById('loginOverlay').classList.add('show');
   document.getElementById('loginUser').value = '';
