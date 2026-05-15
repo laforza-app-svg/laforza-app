@@ -825,49 +825,62 @@ var S = {
 // ═══════════════════════════════════════════════════════════════════
 var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzZvkqz5vUuPfn7om4p0K_6lpJXSaSG4XAPH0manZ8dKDvbP1dyUg_VAn7-771H1zcw5A/exec';
 
+// Credenziali locali per il login (sincronizzate con UtentiApp nel DB)
+var LOCAL_USERS = [
+  {username:'gessica',   password:'laforza2026', nome:'Gessica Arancio', ruolo:'admin'},
+  {username:'admin',     password:'laforza2026', nome:'Amministratore',  ruolo:'admin'},
+  {username:'operatore', password:'laforza123',  nome:'Operatore',       ruolo:'operatore'},
+];
+
 function api(action, data) {
+  // Login is handled locally — no server call needed
+  if (action === 'login') {
+    return new Promise(function(resolve) {
+      var d = data || {};
+      var user = LOCAL_USERS.find(function(u) {
+        return u.username === d.username && u.password === d.password;
+      });
+      if (user) resolve({ ok: true, nome: user.nome, ruolo: user.ruolo, username: user.username });
+      else resolve({ ok: false, error: 'Username o password errati' });
+    });
+  }
+
+  // All other calls use JSONP to Apps Script
   return new Promise(function(resolve, reject) {
-    // Use GET with URL params to avoid CORS preflight issues with Apps Script
-    var params = 'action=' + encodeURIComponent(action) +
-                 '&data=' + encodeURIComponent(JSON.stringify(data || {}));
-    var url = APPS_SCRIPT_URL + '?' + params;
-    
-    // Use no-cors via script tag trick for Apps Script
-    var callbackName = 'cb_' + Date.now();
-    var script = document.createElement('script');
-    
-    window[callbackName] = function(r) {
-      delete window[callbackName];
-      document.body.removeChild(script);
+    var cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random()*9999);
+    var params  = 'action=' + encodeURIComponent(action) +
+                  '&data='  + encodeURIComponent(JSON.stringify(data || {})) +
+                  '&callback=' + cbName;
+    var script  = document.createElement('script');
+    var done    = false;
+
+    var cleanup = function() {
+      done = true;
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+    };
+
+    window[cbName] = function(r) {
+      cleanup();
       if (r && r.ok === false) reject(new Error(r.error || 'Errore server'));
       else resolve(r && r.data !== undefined ? r.data : r);
     };
-    
+
     script.onerror = function() {
-      delete window[callbackName];
-      document.body.removeChild(script);
-      // Fallback: try fetch
-      fetch(url, { method: 'GET' })
-        .then(function(res) { return res.json(); })
-        .then(function(r) {
-          if (r && r.ok === false) reject(new Error(r.error));
-          else resolve(r && r.data !== undefined ? r.data : r);
-        })
-        .catch(function(err) { reject(new Error('Errore connessione')); });
+      if (done) return;
+      cleanup();
+      reject(new Error('Errore di connessione — verifica la rete'));
     };
-    
-    // Apps Script supports JSONP via callback parameter
-    script.src = url + '&callback=' + callbackName;
-    document.body.appendChild(script);
-    
-    // Timeout after 15 seconds
+
+    script.src = APPS_SCRIPT_URL + '?' + params;
+    document.head.appendChild(script);
+
     setTimeout(function() {
-      if (window[callbackName]) {
-        delete window[callbackName];
-        try { document.body.removeChild(script); } catch(e) {}
-        reject(new Error('Timeout — riprova'));
+      if (!done) {
+        cleanup();
+        reject(new Error('Timeout — il server non risponde. Riprova.'));
       }
-    }, 15000);
+    }, 20000);
   });
 }
 
