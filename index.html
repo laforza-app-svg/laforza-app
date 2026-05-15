@@ -74,15 +74,31 @@ body {
   margin-top: 4px; letter-spacing: .06em; text-transform: uppercase;
 }
 .sidebar nav { flex: 1; padding: 16px 0; }
-.nav-section {
-  padding: 8px 16px 4px;
-  font-size: .65rem; color: rgba(255,255,255,.35);
-  letter-spacing: .1em; text-transform: uppercase; font-weight: 600;
+/* Accordion nav */
+.nav-group { border-bottom: 1px solid rgba(255,255,255,.06); }
+.nav-group-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 16px 10px 14px; cursor: pointer;
+  color: rgba(255,255,255,.5); font-size: .68rem;
+  letter-spacing: .1em; text-transform: uppercase; font-weight: 700;
+  user-select: none; transition: var(--trans);
 }
+.nav-group-header:hover { color: rgba(255,255,255,.75); background: rgba(255,255,255,.04); }
+.nav-group-header .nav-group-icon { font-size: .9rem; margin-right: 6px; }
+.nav-group-header .nav-chevron {
+  font-size: .7rem; transition: transform .22s ease;
+  opacity: .5;
+}
+.nav-group.open .nav-chevron { transform: rotate(180deg); }
+.nav-group-body {
+  max-height: 0; overflow: hidden;
+  transition: max-height .28s cubic-bezier(.4,0,.2,1);
+}
+.nav-group.open .nav-group-body { max-height: 400px; }
 .nav-item {
-  display: flex; align-items: center; gap: 10px;
-  padding: 10px 20px; cursor: pointer;
-  color: rgba(255,255,255,.7); font-size: .88rem;
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 16px 8px 28px; cursor: pointer;
+  color: rgba(255,255,255,.65); font-size: .85rem;
   transition: var(--trans); border-left: 3px solid transparent;
   user-select: none;
 }
@@ -91,7 +107,7 @@ body {
   background: rgba(255,255,255,.12); color: var(--white);
   border-left-color: var(--sky);
 }
-.nav-item .icon { font-size: 1.1rem; width: 20px; text-align: center; }
+.nav-item .icon { font-size: 1rem; width: 18px; text-align: center; flex-shrink: 0; }
 .sidebar-footer {
   padding: 16px;
   border-top: 1px solid rgba(255,255,255,.1);
@@ -706,56 +722,113 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
       <h1>La Forza</h1>
       <p>Gestione Comunità</p>
     </div>
-    <nav>
-      <div class="nav-section">Panoramica</div>
-      <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
-        <span class="icon">📊</span> Dashboard
+    <nav id="sidebarNav">
+
+      <!-- PANORAMICA -->
+      <div class="nav-group open" id="group-panoramica">
+        <div class="nav-group-header" onclick="toggleGroup('group-panoramica')">
+          <span><span class="nav-group-icon">📊</span>Panoramica</span>
+          <span class="nav-chevron">▼</span>
+        </div>
+        <div class="nav-group-body">
+          <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
+            <span class="icon">🏠</span> Dashboard
+          </div>
+        </div>
       </div>
-      <div class="nav-section">Anagrafica</div>
-      <div class="nav-item" onclick="showPage('utenti')" id="nav-utenti">
-        <span class="icon">👤</span> Utenti
+
+      <!-- ANAGRAFICA -->
+      <div class="nav-group" id="group-anagrafica">
+        <div class="nav-group-header" onclick="toggleGroup('group-anagrafica')">
+          <span><span class="nav-group-icon">👥</span>Anagrafica</span>
+          <span class="nav-chevron">▼</span>
+        </div>
+        <div class="nav-group-body">
+          <div class="nav-item" onclick="showPage('utenti')" id="nav-utenti">
+            <span class="icon">👤</span> Utenti
+          </div>
+          <div class="nav-item" onclick="showPage('operatori')" id="nav-operatori">
+            <span class="icon">🧑‍⚕️</span> Operatori
+          </div>
+          <div class="nav-item" onclick="showPage('mansioni')" id="nav-mansioni">
+            <span class="icon">🔧</span> Mansioni
+          </div>
+        </div>
       </div>
-      <div class="nav-item" onclick="showPage('operatori')" id="nav-operatori">
-        <span class="icon">🧑‍⚕️</span> Operatori
+
+      <!-- PIANIFICAZIONE -->
+      <div class="nav-group" id="group-pianificazione">
+        <div class="nav-group-header" onclick="toggleGroup('group-pianificazione')">
+          <span><span class="nav-group-icon">📅</span>Pianificazione</span>
+          <span class="nav-chevron">▼</span>
+        </div>
+        <div class="nav-group-body">
+          <div class="nav-item" onclick="showPage('calendario')" id="nav-calendario">
+            <span class="icon">📅</span> Calendario Utenti
+          </div>
+          <div class="nav-item" onclick="showPage('turni')" id="nav-turni">
+            <span class="icon">🗓️</span> Turni Operatori
+          </div>
+          <div class="nav-item" onclick="showPage('presenze')" id="nav-presenze">
+            <span class="icon">📆</span> Presenze Fisse
+          </div>
+          <div class="nav-item" onclick="showPage('compiti')" id="nav-compiti">
+            <span class="icon">📋</span> Compiti Operatori
+          </div>
+          <div class="nav-item" onclick="showPage('ruoli')" id="nav-ruoli">
+            <span class="icon">🎖️</span> Ruoli & Competenze
+          </div>
+        </div>
       </div>
-      <div class="nav-item" onclick="showPage('mansioni')" id="nav-mansioni">
-        <span class="icon">🔧</span> Mansioni
+
+      <!-- GESTIONE -->
+      <div class="nav-group" id="group-gestione">
+        <div class="nav-group-header" onclick="toggleGroup('group-gestione')">
+          <span><span class="nav-group-icon">⚙️</span>Gestione</span>
+          <span class="nav-chevron">▼</span>
+        </div>
+        <div class="nav-group-body">
+          <div class="nav-item" onclick="showPage('sostituzioni')" id="nav-sostituzioni">
+            <span class="icon">🔄</span> Sostituzioni
+          </div>
+          <div class="nav-item" onclick="showPage('debiti')" id="nav-debiti">
+            <span class="icon">⚖️</span> Debiti/Crediti
+          </div>
+          <div class="nav-item" onclick="showPage('testi')" id="nav-testi">
+            <span class="icon">✍️</span> Testi Ordine
+          </div>
+        </div>
       </div>
-      <div class="nav-section">Pianificazione</div>
-      <div class="nav-item" onclick="showPage('calendario')" id="nav-calendario">
-        <span class="icon">📅</span> Calendario Utenti
+
+      <!-- AMMINISTRAZIONE -->
+      <div class="nav-group" id="group-admin">
+        <div class="nav-group-header" onclick="toggleGroup('group-admin')">
+          <span><span class="nav-group-icon">🔒</span>Amministrazione</span>
+          <span class="nav-chevron">▼</span>
+        </div>
+        <div class="nav-group-body">
+          <div class="nav-item" onclick="showPage('permessi')" id="nav-permessi">
+            <span class="icon">🔐</span> Permessi Ruoli
+          </div>
+          <div class="nav-item" onclick="showPage('log')" id="nav-log">
+            <span class="icon">📋</span> Log Azioni
+          </div>
+        </div>
       </div>
-      <div class="nav-item" onclick="showPage('turni')" id="nav-turni">
-        <span class="icon">🗓️</span> Turni Operatori
+
+      <!-- REPORT -->
+      <div class="nav-group" id="group-report">
+        <div class="nav-group-header" onclick="toggleGroup('group-report')">
+          <span><span class="nav-group-icon">🖨️</span>Report</span>
+          <span class="nav-chevron">▼</span>
+        </div>
+        <div class="nav-group-body">
+          <div class="nav-item" onclick="showPage('report')" id="nav-report">
+            <span class="icon">🖨️</span> Stampa Report
+          </div>
+        </div>
       </div>
-      <div class="nav-item" onclick="showPage('presenze')" id="nav-presenze">
-        <span class="icon">📆</span> Presenze Fisse
-      </div>
-      <div class="nav-item" onclick="showPage('compiti')" id="nav-compiti">
-        <span class="icon">📋</span> Compiti Operatori
-      </div>
-      <div class="nav-item" onclick="showPage('ruoli')" id="nav-ruoli">
-        <span class="icon">🎖️</span> Ruoli & Competenze
-      </div>
-      <div class="nav-item" onclick="showPage('sostituzioni')" id="nav-sostituzioni">
-        <span class="icon">🔄</span> Sostituzioni
-      </div>
-      <div class="nav-item" onclick="showPage('debiti')" id="nav-debiti">
-        <span class="icon">⚖️</span> Debiti/Crediti
-      </div>
-      <div class="nav-section">Report</div>
-      <div class="nav-item" onclick="showPage('testi')" id="nav-testi">
-        <span class="icon">✍️</span> Testi Ordine
-      </div>
-      <div class="nav-item" onclick="showPage('permessi')" id="nav-permessi">
-        <span class="icon">🔐</span> Permessi Ruoli
-      </div>
-      <div class="nav-item" onclick="showPage('log')" id="nav-log">
-        <span class="icon">📋</span> Log Azioni
-      </div>
-      <div class="nav-item" onclick="showPage('report')" id="nav-report">
-        <span class="icon">🖨️</span> Stampa Report
-      </div>
+
     </nav>
     <div class="user-badge" id="userBadge" style="display:none">
       <div class="avatar" id="userAvatar">?</div>
@@ -765,10 +838,14 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
       </div>
       <button class="logout-btn" onclick="doLogout()" title="Esci">⏻</button>
     </div>
-    <div class="sidebar-footer">
-      <div style="margin-bottom:4px">Realizzazione:</div>
-      <a href="https://www.apwebradiosocialtv.it" target="_blank" style="color:rgba(255,255,255,0.6);text-decoration:none;font-size:.68rem;word-break:break-all" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.6)'">www.apwebradiosocialtv.it</a>
-      <div style="margin-top:6px;color:rgba(255,255,255,0.3);font-size:.65rem">© Copyright La Forza 2026</div>
+    <div class="sidebar-footer" style="padding:10px 14px;border-top:1px solid rgba(255,255,255,.08)">
+      <div style="font-size:.65rem;color:rgba(255,255,255,.3);margin-bottom:3px">Realizzazione</div>
+      <a href="https://www.apwebradiosocialtv.it" target="_blank"
+         style="color:rgba(255,255,255,.5);text-decoration:none;font-size:.68rem;display:block;margin-bottom:5px"
+         onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.5)'">
+        www.apwebradiosocialtv.it
+      </a>
+      <div style="color:rgba(255,255,255,.25);font-size:.62rem">© La Forza 2026</div>
     </div>
   </aside>
 
@@ -1043,6 +1120,12 @@ function canRead(sezione)  { return hasPermesso(sezione, 'r'); }
 
 // Applica permessi al menu — nasconde voci non accessibili
 function applyPermessiMenu() {
+  // Nascondi gruppo admin se non admin
+  var adminGroup = document.getElementById('group-admin');
+  if (adminGroup) {
+    var isAdmin = currentUser && (currentUser.ruolo === 'admin' || currentUser.ruolo === 'Responsabile');
+    adminGroup.style.display = isAdmin ? '' : 'none';
+  }
   var menuMap = {
     'nav-dashboard':  'dashboard',
     'nav-utenti':     'utenti',
@@ -1163,6 +1246,8 @@ function showPage(page) {
   document.querySelectorAll('.bnav-item').forEach(function(el){ el.classList.remove('active'); });
   var bnavEl = document.getElementById('bnav-'+page);
   if (bnavEl) bnavEl.classList.add('active');
+  // Apri gruppo corretto nel menu
+  openGroupForPage(page);
   // Close sidebar on mobile when navigating
   if (window.innerWidth <= 768) closeSidebar();
   
@@ -3300,6 +3385,29 @@ function doLogout() {
 // ═══════════════════════════════════════════════════════════════════
 //  MOBILE SIDEBAR TOGGLE
 // ═══════════════════════════════════════════════════════════════════
+function toggleGroup(groupId) {
+  var group = document.getElementById(groupId);
+  if (!group) return;
+  var isOpen = group.classList.contains('open');
+  // Chiudi tutti
+  document.querySelectorAll('.nav-group').forEach(function(g){
+    g.classList.remove('open');
+  });
+  // Apri quello cliccato se era chiuso
+  if (!isOpen) group.classList.add('open');
+}
+
+// Apri automaticamente il gruppo che contiene la voce attiva
+function openGroupForPage(page) {
+  var navEl = document.getElementById('nav-' + page);
+  if (!navEl) return;
+  var group = navEl.closest('.nav-group');
+  if (group) {
+    document.querySelectorAll('.nav-group').forEach(function(g){ g.classList.remove('open'); });
+    group.classList.add('open');
+  }
+}
+
 function toggleSidebar() {
   var sidebar  = document.querySelector('.sidebar');
   var overlay  = document.getElementById('sidebarOverlay');
