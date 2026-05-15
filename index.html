@@ -827,18 +827,47 @@ var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzZvkqz5vUuPfn7om
 
 function api(action, data) {
   return new Promise(function(resolve, reject) {
-    var url = APPS_SCRIPT_URL + '?action=' + encodeURIComponent(action);
-    fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify({ action: action, data: data || {} })
-    })
-    .then(function(res) { return res.json(); })
-    .then(function(r) {
-      if (r && r.ok === false) reject(new Error(r.error));
+    // Use GET with URL params to avoid CORS preflight issues with Apps Script
+    var params = 'action=' + encodeURIComponent(action) +
+                 '&data=' + encodeURIComponent(JSON.stringify(data || {}));
+    var url = APPS_SCRIPT_URL + '?' + params;
+    
+    // Use no-cors via script tag trick for Apps Script
+    var callbackName = 'cb_' + Date.now();
+    var script = document.createElement('script');
+    
+    window[callbackName] = function(r) {
+      delete window[callbackName];
+      document.body.removeChild(script);
+      if (r && r.ok === false) reject(new Error(r.error || 'Errore server'));
       else resolve(r && r.data !== undefined ? r.data : r);
-    })
-    .catch(function(err) { reject(new Error('Errore connessione: ' + err.message)); });
+    };
+    
+    script.onerror = function() {
+      delete window[callbackName];
+      document.body.removeChild(script);
+      // Fallback: try fetch
+      fetch(url, { method: 'GET' })
+        .then(function(res) { return res.json(); })
+        .then(function(r) {
+          if (r && r.ok === false) reject(new Error(r.error));
+          else resolve(r && r.data !== undefined ? r.data : r);
+        })
+        .catch(function(err) { reject(new Error('Errore connessione')); });
+    };
+    
+    // Apps Script supports JSONP via callback parameter
+    script.src = url + '&callback=' + callbackName;
+    document.body.appendChild(script);
+    
+    // Timeout after 15 seconds
+    setTimeout(function() {
+      if (window[callbackName]) {
+        delete window[callbackName];
+        try { document.body.removeChild(script); } catch(e) {}
+        reject(new Error('Timeout — riprova'));
+      }
+    }, 15000);
   });
 }
 
