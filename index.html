@@ -1559,6 +1559,28 @@ function saveMansione() {
 // ═══════════════════════════════════════════════════════════════════
 //  CALENDARIO
 // ═══════════════════════════════════════════════════════════════════
+function formatDataLeggibile(val) {
+  if (!val) return '';
+  var s = val.toString().trim();
+  // Already formatted dd/MM/yyyy
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) return s;
+  // ISO timestamp: 2026-05-02T22:00:00.000Z
+  if (s.indexOf('T') > 0 || s.indexOf('-') > 0) {
+    try {
+      var d = new Date(s);
+      if (!isNaN(d.getTime())) {
+        // Aggiungi 1 giorno se ora è 22:00 (fuso orario Italia)
+        if (d.getHours() === 22) d.setDate(d.getDate()+1);
+        var dd = ('0'+d.getDate()).slice(-2);
+        var mm = ('0'+(d.getMonth()+1)).slice(-2);
+        var yy = d.getFullYear();
+        return dd+'/'+mm+'/'+yy;
+      }
+    } catch(e) {}
+  }
+  return s;
+}
+
 function renderCalendario() {
   document.getElementById('topbarActions').innerHTML =
     '<button class="btn btn-success" onclick="showGeneraModal()"><span>✨</span><span class="btn-text-hide"> Genera Mensile</span></button>';
@@ -1603,8 +1625,6 @@ function selectSettimana(id) {
 function renderCalGrid(settimanaId) {
   var rows = S.calendario.filter(function(r){ return r.settimana_id === settimanaId; });
   if (!rows || rows.length === 0) return '<p style="color:var(--gray3);padding:20px">Nessun dato per questa settimana.</p>';
-  // DEBUG: mostra struttura prima riga
-  console.log('CalGrid rows:', rows.length, 'First row:', JSON.stringify(rows[0]));
 
   // Struttura: raggruppa per zona/mansione e giorno
   // Ogni riga = { zona, giorno, utente_nome }
@@ -1643,7 +1663,7 @@ function renderCalGrid(settimanaId) {
     GIORNI_ORDER.forEach(function(g) {
       var utenti = zonaMap[zona][g] || [];
       if (utenti.length === 0) {
-        html += '<td class="cal-cell" style="color:var(--gray2)">—</td>';
+        html += '<td class="cal-cell" style="color:var(--gray2);text-align:center">·</td>';
       } else {
         html += '<td class="cal-cell">' +
           utenti.map(function(u){ return '<div style="font-size:.72rem;padding:1px 0">'+u+'</div>'; }).join('') +
@@ -1690,30 +1710,34 @@ function generaCalendario() {
     // Costruisci lista settimane
     var settimaneMap = {};
     S.calendario.forEach(function(r) {
-      if (r.settimana_id && !settimaneMap[r.settimana_id]) {
-        // Parse settimana_id: "2026_5_S1" -> "Sett. 1 — Maggio 2026"
-        var parts = r.settimana_id.split('_');
-        var anno  = parts[0] || '';
-        var mese  = parts[1] || '';
-        var num   = parts[2] || '';
-        var mesiNomi = ['','Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
-                        'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
-        var label = num.replace('S','Sett. ') + ' — ' + (mesiNomi[parseInt(mese)]||mese) + ' ' + anno;
-        settimaneMap[r.settimana_id] = { id: r.settimana_id, label: label,
-          tipo: 'B', dal: '', al: '' };
+      if (!r.settimana_id) return;
+      if (!settimaneMap[r.settimana_id]) {
+        settimaneMap[r.settimana_id] = { id: r.settimana_id, label: r.settimana_id, tipo:'B', dal:'', al:'' };
+      }
+      // Aggiorna con dal/al se disponibili e leggibili
+      if (r.dal && r.al) {
+        var dalStr = formatDataLeggibile(r.dal);
+        var alStr  = formatDataLeggibile(r.al);
+        if (dalStr && alStr) {
+          settimaneMap[r.settimana_id].dal   = dalStr;
+          settimaneMap[r.settimana_id].al    = alStr;
+          settimaneMap[r.settimana_id].tipo  = r.tipo || 'B';
+          settimaneMap[r.settimana_id].label = (r.tipo||'Sett.') + ' ' + dalStr + ' – ' + alStr;
+        }
+      }
+      // Fallback: parse settimana_id "SETT_2026_05_1" or "2026_5_S1"
+      if (settimaneMap[r.settimana_id].label === r.settimana_id) {
+        var sid = r.settimana_id;
+        var mesiNomi = ['','Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic'];
+        var m1 = sid.match(/(\d{4})_(\d{1,2})_S?(\d+)/);
+        if (m1) {
+          settimaneMap[r.settimana_id].label = 
+            'Sett.' + m1[3] + ' — ' + (mesiNomi[parseInt(m1[2])]||m1[2]) + ' ' + m1[1];
+        }
       }
     });
     S.settimane = Object.values(settimaneMap).sort(function(a,b){
       return a.id > b.id ? 1 : -1;
-    });
-    // Update labels with dal/al from actual data
-    S.calendario.forEach(function(r){
-      if (r.settimana_id && settimaneMap[r.settimana_id] && r.dal && r.al) {
-        settimaneMap[r.settimana_id].dal = r.dal;
-        settimaneMap[r.settimana_id].al  = r.al;
-        settimaneMap[r.settimana_id].tipo = r.tipo || 'B';
-        settimaneMap[r.settimana_id].label = (r.tipo||'Sett.') + ' ' + (r.dal||'') + ' – ' + (r.al||'');
-      }
     });
     if (S.settimane.length > 0) S.currentSettimana = S.settimane[0].id;
     closeModal();
