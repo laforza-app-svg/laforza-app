@@ -1603,6 +1603,8 @@ function selectSettimana(id) {
 function renderCalGrid(settimanaId) {
   var rows = S.calendario.filter(function(r){ return r.settimana_id === settimanaId; });
   if (!rows || rows.length === 0) return '<p style="color:var(--gray3);padding:20px">Nessun dato per questa settimana.</p>';
+  // DEBUG: mostra struttura prima riga
+  console.log('CalGrid rows:', rows.length, 'First row:', JSON.stringify(rows[0]));
 
   // Struttura: raggruppa per zona/mansione e giorno
   // Ogni riga = { zona, giorno, utente_nome }
@@ -1612,10 +1614,13 @@ function renderCalGrid(settimanaId) {
   var zonaMap = {};
   rows.forEach(function(r) {
     var zona = r.zona || r.mansione_id || '—';
-    var giorno = (r.giorno||'').toString().toUpperCase();
-    // Normalizza giorno numerico -> nome
-    var giorniNum = {0:'DOM',1:'LUN',2:'MAR',3:'MER',4:'GIO',5:'VEN',6:'SAB'};
-    if (!isNaN(parseInt(giorno))) giorno = giorniNum[parseInt(giorno)] || giorno;
+    var giornoRaw = (r.giorno||'').toString().trim();
+    var giorniNum = {'0':'DOM','1':'LUN','2':'MAR','3':'MER','4':'GIO','5':'VEN','6':'SAB'};
+    var giorniNom = {'DOMENICA':'DOM','LUNEDI':'LUN','MARTEDI':'MAR','MERCOLEDI':'MER',
+                     'GIOVEDI':'GIO','VENERDI':'VEN','SABATO':'SAB',
+                     'DOM':'DOM','LUN':'LUN','MAR':'MAR','MER':'MER',
+                     'GIO':'GIO','VEN':'VEN','SAB':'SAB'};
+    var giorno = giorniNum[giornoRaw] || giorniNom[giornoRaw.toUpperCase()] || giornoRaw.toUpperCase().substring(0,3);
     if (!zonaMap[zona]) zonaMap[zona] = {};
     if (!zonaMap[zona][giorno]) zonaMap[zona][giorno] = [];
     var nome = r.utente_nome || r.utente_id || '';
