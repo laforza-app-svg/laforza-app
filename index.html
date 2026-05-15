@@ -1579,7 +1579,7 @@ function renderCalendario() {
     S.settimane.forEach(function(s, i) {
       html += '<div class="week-badge" style="cursor:pointer;'+(S.currentSettimana===s.id?'':'background:var(--gray2);color:var(--text)')+'" ' +
         'onclick="selectSettimana(\''+s.id+'\')">' +
-        '<span>'+s.tipo+'</span><span>'+s.dal+' – '+s.al+'</span></div>';
+        '<span>'+(s.label||s.id)+'</span></div>';
     });
     html += '</div>';
     
@@ -1679,11 +1679,22 @@ function generaCalendario() {
     // Costruisci lista settimane
     var settimaneMap = {};
     S.calendario.forEach(function(r) {
-      if (!settimaneMap[r.settimana_id]) {
-        settimaneMap[r.settimana_id] = { id: r.settimana_id, label: r.settimana_id };
+      if (r.settimana_id && !settimaneMap[r.settimana_id]) {
+        // Parse settimana_id: "2026_5_S1" -> "Sett. 1 — Maggio 2026"
+        var parts = r.settimana_id.split('_');
+        var anno  = parts[0] || '';
+        var mese  = parts[1] || '';
+        var num   = parts[2] || '';
+        var mesiNomi = ['','Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
+                        'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'];
+        var label = num.replace('S','Sett. ') + ' — ' + (mesiNomi[parseInt(mese)]||mese) + ' ' + anno;
+        settimaneMap[r.settimana_id] = { id: r.settimana_id, label: label,
+          tipo: 'B', dal: '', al: '' };
       }
     });
-    S.settimane = Object.values(settimaneMap);
+    S.settimane = Object.values(settimaneMap).sort(function(a,b){
+      return a.id > b.id ? 1 : -1;
+    });
     if (S.settimane.length > 0) S.currentSettimana = S.settimane[0].id;
     closeModal();
     renderCalendario();
