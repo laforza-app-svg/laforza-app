@@ -1670,19 +1670,24 @@ function generaCalendario() {
   var mese = parseInt(getVal('gen_mese'));
   if (!anno || !mese) { toast('Inserisci anno e mese','error'); return; }
   showLoader(true);
-  callApi('generaCalendarioAutomatico', { anno: anno, mese: mese, utenti: S.utenti }).then(function(d) {
-    // Build settimane list from result
+  callApi('generaCalendarioAutomatico', { anno: anno, mese: mese, utenti: S.utenti }).then(function(result) {
+    // result = {ok:true, settimane:N, assegnazioni:N}
+    // Ricarica il calendario dal DB
+    return callApi('getCalendario', {});
+  }).then(function(d) {
+    S.calendario = Array.isArray(d) ? d : [];
+    // Costruisci lista settimane
     var settimaneMap = {};
-    (d||[]).forEach(function(r) {
+    S.calendario.forEach(function(r) {
       if (!settimaneMap[r.settimana_id]) {
-        settimaneMap[r.settimana_id] = { id: r.settimana_id, tipo: r.tipo, dal: r.dal, al: r.al };
+        settimaneMap[r.settimana_id] = { id: r.settimana_id, label: r.settimana_id };
       }
     });
     S.settimane = Object.values(settimaneMap);
     if (S.settimane.length > 0) S.currentSettimana = S.settimane[0].id;
-    S.calendario = d||[];
-    closeModal(); renderCalendario();
-    toast('Calendario generato: '+S.settimane.length+' settimane ✓','success');
+    closeModal();
+    renderCalendario();
+    toast('Calendario generato ✓', 'success');
   }).catch(function(e){ toast('Errore: '+e.message,'error'); })
     .finally(function(){ showLoader(false); });
 }
