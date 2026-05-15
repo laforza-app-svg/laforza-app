@@ -827,9 +827,9 @@ var S = {
 // ═══════════════════════════════════════════════════════════════════
 //  API
 // ═══════════════════════════════════════════════════════════════════
-var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzZvkqz5vUuPfn7om4p0K_6lpJXSaSG4XAPH0manZ8dKDvbP1dyUg_VAn7-771H1zcw5A/exec';
+var PROXY_URL = 'https://laforza-proxy.gestionecalendarilaforza.workers.dev';
 
-// Credenziali — caricate da Apps Script all'avvio, fallback locale
+// Login locale con auto-caricamento dal DB
 var LOCAL_USERS = [
   {username:'gessica',   password:'laforza2026', nome:'Gessica Arancio', ruolo:'admin'},
   {username:'admin',     password:'laforza2026', nome:'Amministratore',  ruolo:'admin'},
@@ -837,113 +837,56 @@ var LOCAL_USERS = [
 ];
 var usersLoaded = false;
 
-// Carica utenti da DB all'avvio (JSONP) — aggiorna LOCAL_USERS con i dati reali
 function loadUsersFromDB() {
   return new Promise(function(resolve) {
     if (usersLoaded) { resolve(); return; }
-    var cbName = 'cbUsers_' + Date.now();
-    var script = document.createElement('script');
-    var done = false;
-
-    window[cbName] = function(r) {
-      done = true;
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-      if (r && r.data && Array.isArray(r.data) && r.data.length > 0) {
-        LOCAL_USERS = r.data
-          .filter(function(u){ return u.attivo===true||u.attivo==='TRUE'||u.attivo==='true'; })
-          .map(function(u){ return {
-            username: u.username, password: u.password,
-            nome: u.nome, ruolo: u.ruolo
-          }; });
-        usersLoaded = true;
-      }
-      resolve();
-    };
-
-    script.onerror = function() {
-      if (!done) { done=true; delete window[cbName]; resolve(); }
-    };
-
-    script.src = APPS_SCRIPT_URL + '?action=getUtentiApp&data={}&callback=' + cbName;
-    document.head.appendChild(script);
-
-    // Timeout 8s — se non risponde usa il fallback locale
-    setTimeout(function() {
-      if (!done) { done=true; delete window[cbName];
-        if (script.parentNode) script.parentNode.removeChild(script);
+    fetch(PROXY_URL + '?action=getUtentiApp&data={}')
+      .then(function(r){ return r.json(); })
+      .then(function(r){
+        if (r && r.data && Array.isArray(r.data) && r.data.length > 0) {
+          LOCAL_USERS = r.data
+            .filter(function(u){ return u.attivo===true||u.attivo==='TRUE'||u.attivo==='true'; })
+            .map(function(u){ return {username:u.username,password:u.password,nome:u.nome,ruolo:u.ruolo}; });
+          usersLoaded = true;
+        }
         resolve();
-      }
-    }, 8000);
+      })
+      .catch(function(){ resolve(); });
+    setTimeout(function(){ resolve(); }, 6000);
   });
 }
 
 function api(action, data) {
-  // Login: verifica credenziali (usa lista dal DB se già caricata)
+  // Login locale
   if (action === 'login') {
     return new Promise(function(resolve) {
       var doCheck = function() {
         var d = data || {};
-        var user = LOCAL_USERS.find(function(u) {
-          return u.username === d.username && u.password === d.password;
+        var user = LOCAL_USERS.find(function(u){
+          return u.username===d.username && u.password===d.password;
         });
-        if (user) resolve({ ok: true, nome: user.nome, ruolo: user.ruolo, username: user.username });
-        else resolve({ ok: false, error: 'Username o password errati' });
+        if (user) resolve({ok:true, nome:user.nome, ruolo:user.ruolo, username:user.username});
+        else resolve({ok:false, error:'Username o password errati'});
       };
-      // Se utenti non ancora caricati dal DB, caricali prima
-      if (!usersLoaded) {
-        loadUsersFromDB().then(doCheck);
-      } else {
-        doCheck();
-      }
+      if (!usersLoaded) loadUsersFromDB().then(doCheck);
+      else doCheck();
     });
   }
 
-  // All other calls use JSONP to Apps Script
-  return new Promise(function(resolve, reject) {
-    var cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random()*9999);
-    var params  = 'action=' + encodeURIComponent(action) +
-                  '&data='  + encodeURIComponent(JSON.stringify(data || {})) +
-                  '&callback=' + cbName;
-    var script  = document.createElement('script');
-    var done    = false;
-
-    var cleanup = function() {
-      done = true;
-      delete window[cbName];
-      if (script.parentNode) script.parentNode.removeChild(script);
-    };
-
-    window[cbName] = function(r) {
-      cleanup();
-      if (r && r.ok === false) reject(new Error(r.error || 'Errore server'));
-      else resolve(r && r.data !== undefined ? r.data : r);
-    };
-
-    script.onerror = function() {
-      if (done) return;
-      cleanup();
-      reject(new Error('Errore di connessione — verifica la rete'));
-    };
-
-    script.src = APPS_SCRIPT_URL + '?' + params;
-    document.head.appendChild(script);
-
-    setTimeout(function() {
-      if (!done) {
-        cleanup();
-        reject(new Error('Timeout — il server non risponde. Riprova.'));
-      }
-    }, 20000);
+  // Tutte le altre chiamate via proxy Cloudflare (fetch normale, no CORS)
+  return fetch(PROXY_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: action, data: data || {} })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(r){
+    if (r && r.ok === false) throw new Error(r.error || 'Errore server');
+    return r && r.data !== undefined ? r.data : r;
   });
 }
 
-// Per test in locale (senza Apps Script) usa dati mock
-function apiLocal(action, data) {
-  return Promise.resolve(mockData(action, data));
-}
 
-// Detect se siamo dentro Apps Script
 var isAppsScript = false; // GitHub Pages mode
 
 // Timeout wrapper — se JSONP non risponde entro N secondi usa mock
