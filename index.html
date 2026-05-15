@@ -1037,6 +1037,9 @@ function mockData(action) {
   if (action==='generaCalendario') return [];
   if (action==='registraSostituzione') return {ok:true,debito_id:'D'+Date.now()};
   if (action==='saldaDebito') return true;
+  if (action==='generaCalendarioAutomatico') return {ok:true, settimane:4, assegnazioni:80};
+  if (action==='getContatori') return {};
+  if (action==='resetContatori') return true;
   if (action==='getRuoliPermessi') return [
     {id:'RP_admin_all',ruolo:'admin',sezione:'*',permesso:'rw'},
     {id:'RP_resp_all',ruolo:'Responsabile',sezione:'*',permesso:'rw'},
@@ -1652,7 +1655,7 @@ function generaCalendario() {
   var mese = parseInt(getVal('gen_mese'));
   if (!anno || !mese) { toast('Inserisci anno e mese','error'); return; }
   showLoader(true);
-  callApi('generaCalendario', { anno: anno, mese: mese, utenti: S.utenti }).then(function(d) {
+  callApi('generaCalendarioAutomatico', { anno: anno, mese: mese, utenti: S.utenti }).then(function(d) {
     // Build settimane list from result
     var settimaneMap = {};
     (d||[]).forEach(function(r) {
