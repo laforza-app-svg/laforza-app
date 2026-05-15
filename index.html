@@ -887,42 +887,10 @@ function api(action, data) {
 }
 
 
-var isAppsScript = false; // GitHub Pages mode
+var isAppsScript = false; // GitHub Pages + Cloudflare proxy mode
 
-// Timeout wrapper — se JSONP non risponde entro N secondi usa mock
-function callApi(action, data) {
-  // Login è sempre locale
-  if (action === 'login') return api(action, data);
-  
-  return new Promise(function(resolve) {
-    var resolved = false;
-    var mockResult = apiLocal(action, data);
-    
-    // Timeout di 5 secondi — se Apps Script non risponde, usa mock
-    var timer = setTimeout(function() {
-      if (!resolved) {
-        resolved = true;
-        console.warn('Timeout Apps Script per', action, '— uso dati locali');
-        resolve(mockResult);
-      }
-    }, 5000);
-    
-    // Tenta Apps Script via JSONP
-    api(action, data).then(function(result) {
-      if (!resolved) {
-        resolved = true;
-        clearTimeout(timer);
-        resolve(result);
-      }
-    }).catch(function() {
-      if (!resolved) {
-        resolved = true;
-        clearTimeout(timer);
-        resolve(mockResult);
-      }
-    });
-  });
-}
+// callApi usa il proxy Cloudflare — nessun fallback mock
+var callApi = api;
 
 // ═══════════════════════════════════════════════════════════════════
 //  MOCK DATA (per preview fuori Apps Script)
