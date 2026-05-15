@@ -744,6 +744,9 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
         <span class="icon">⚖️</span> Debiti/Crediti
       </div>
       <div class="nav-section">Report</div>
+      <div class="nav-item" onclick="showPage('testi')" id="nav-testi">
+        <span class="icon">✍️</span> Testi Ordine
+      </div>
       <div class="nav-item" onclick="showPage('report')" id="nav-report">
         <span class="icon">🖨️</span> Stampa Report
       </div>
@@ -819,6 +822,7 @@ var S = {
   calendario: [], debiti: [],
   turniOperatori: [], compitiOperatori: [], compitiTipi: [],
   ruoli: [], presenzeFisse: [],
+  testiOrdine: {}, noteUtenti: [],
   currentPage: 'dashboard',
   currentSettimana: null,
   settimane: [],   // lista settimane generate
@@ -949,6 +953,14 @@ function mockData(action) {
   if (action==='generaCalendario') return [];
   if (action==='registraSostituzione') return {ok:true,debito_id:'D'+Date.now()};
   if (action==='saldaDebito') return true;
+  if (action==='getTestiOrdine') return {
+    testo_intro: 'La sottoscritta Gessica Arancio...testo di default...',
+    note_operative: 'TUTTE LE ATTIVITA\' DOVRANNO ESSERE SVOLTE CON LA PRESENZA DELL\'OPERATORE.',
+    chiusura_extra: ''
+  };
+  if (action==='saveTestiOrdine') return true;
+  if (action==='getNoteUtente') return [];
+  if (action==='saveNotaUtente') return true;
   if (action==='initSheets') return 'ok';
   if (action==='getTurniOperatori') return [];
   if (action==='getRuoli') return [
@@ -1019,6 +1031,8 @@ function loadAll() {
     callApi('getCompitiTipi').then(function(d){ S.compitiTipi = d||[]; }),
     callApi('getRuoli').then(function(d){ S.ruoli = d||[]; }),
     callApi('getPresenzeFisse').then(function(d){ S.presenzeFisse = d||[]; }),
+    callApi('getTestiOrdine').then(function(d){ S.testiOrdine = d||{}; }),
+    callApi('getNoteUtente',{}).then(function(d){ S.noteUtenti = d||[]; }),
   ]).catch(function(e){ toast('Errore caricamento: '+e.message,'error'); })
     .finally(function(){ showLoader(false); });
 }
@@ -1044,7 +1058,8 @@ function showPage(page) {
     mansioni:'Gestione Mansioni', calendario:'Calendario Utenti',
     turni:'Turni Operatori', compiti:'Compiti Operatori',
     ruoli:'Ruoli & Competenze', presenze:'Presenze Fisse',
-    sostituzioni:'Sostituzioni', debiti:'Debiti & Crediti', report:'Stampa Report'
+    sostituzioni:'Sostituzioni', debiti:'Debiti & Crediti',
+    testi:'Testi & Note Ordine di Servizio', report:'Stampa Report'
   };
   document.getElementById('pageTitle').textContent = titles[page]||page;
   document.getElementById('topbarActions').innerHTML = '';
@@ -1054,7 +1069,8 @@ function showPage(page) {
     mansioni: renderMansioni, calendario: renderCalendario,
     turni: renderTurniOperatori, compiti: renderCompitiOperatori,
     ruoli: renderRuoli, presenze: renderPresenzeFisse,
-    sostituzioni: renderSostituzioni, debiti: renderDebiti, report: renderReport
+    sostituzioni: renderSostituzioni, debiti: renderDebiti,
+    testi: renderTestiOrdine, report: renderReport
   };
   if (pages[page]) pages[page]();
 }
@@ -2358,6 +2374,131 @@ function printCompitiOperatori() {
   w.document.write('<!DOCTYPE html><html><head><title>Compiti Operatori</title></head><body>'+html+'</body></html>');
   w.document.close(); w.focus();
   setTimeout(function(){ w.print(); }, 600);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  TESTI & NOTE ORDINE DI SERVIZIO
+// ═══════════════════════════════════════════════════════════════════
+function renderTestiOrdine() {
+  document.getElementById('topbarActions').innerHTML =
+    '<button class="btn btn-success" onclick="saveAllTesti()">💾 Salva tutto</button>';
+
+  var t = S.testiOrdine || {};
+  var html = '';
+
+  // Testo introduttivo
+  html += '<div class="card"><div class="card-header">' +
+    '<span class="card-title">📝 Testo Introduttivo — Prima del Calendario</span>' +
+    '<span style="font-size:.78rem;color:var(--gray3)">Appare nell\'Ordine di Servizio sopra la tabella</span>' +
+    '</div><div class="card-body">' +
+    '<p style="font-size:.82rem;color:var(--gray4);margin-bottom:10px">Scrivi qui il testo che viene stampato prima del calendario operatori. Puoi personalizzarlo ogni settimana oppure tenerlo fisso.</p>' +
+    '<textarea id="testo_intro" class="form-control" rows="8" style="font-family:inherit;font-size:.88rem;line-height:1.6">' +
+    escHtml(t.testo_intro||'') + '</textarea>' +
+    '</div></div>';
+
+  // Note operative (giallo)
+  html += '<div class="card"><div class="card-header">' +
+    '<span class="card-title">⚠️ Note Operative — Evidenziate in Giallo</span>' +
+    '<span style="font-size:.78rem;color:var(--gray3)">Appaiono sotto la tabella, su sfondo giallo</span>' +
+    '</div><div class="card-body">' +
+    '<p style="font-size:.82rem;color:var(--gray4);margin-bottom:10px">Ogni riga diventa una nota separata evidenziata. Usa Invio per andare a capo tra le note.</p>' +
+    '<textarea id="note_operative" class="form-control" rows="6" style="font-family:inherit;font-size:.88rem;line-height:1.6;background:#FFFDE7">' +
+    escHtml(t.note_operative||'') + '</textarea>' +
+    '</div></div>';
+
+  // Chiusura extra
+  html += '<div class="card"><div class="card-header">' +
+    '<span class="card-title">📌 Note Extra in Chiusura</span>' +
+    '<span style="font-size:.78rem;color:var(--gray3)">Appare dopo i saluti, prima delle firme</span>' +
+    '</div><div class="card-body">' +
+    '<textarea id="chiusura_extra" class="form-control" rows="3" style="font-family:inherit;font-size:.88rem" ' +
+    'placeholder="Es: Si ricorda che sabato è prevista una visita esterna...">' +
+    escHtml(t.chiusura_extra||'') + '</textarea>' +
+    '</div></div>';
+
+  // Note utenti per settimana corrente
+  html += '<div class="card"><div class="card-header">' +
+    '<span class="card-title">👤 Note / Avvisi Utenti</span>' +
+    '<span style="font-size:.78rem;color:var(--gray3)">Appaiono nel calendario utenti stampato</span>' +
+    '</div><div class="card-body">';
+
+  if (!S.currentSettimana) {
+    html += '<p style="color:var(--gray3);font-size:.88rem">Genera prima un calendario per aggiungere note agli utenti.</p>';
+  } else {
+    html += '<p style="font-size:.82rem;color:var(--gray4);margin-bottom:14px">Aggiungi note, avvisi o comunicazioni per ogni utente per la settimana corrente. Appaiono stampate nel calendario.</p>';
+    html += '<div style="display:grid;gap:10px">';
+    S.utenti.forEach(function(u) {
+      var nota = S.noteUtenti.find(function(n){
+        return n.utente_id===u.id && n.settimana_id===S.currentSettimana;
+      });
+      var tipoVal = nota ? (nota.tipo||'nota') : 'nota';
+      var tipoCols = {
+        'nota':     '#DBEAFE',
+        'avviso':   '#FEF3C7',
+        'punizione':'#FEE2E2',
+        'premio':   '#D1FAE5'
+      };
+      html += '<div style="display:grid;grid-template-columns:160px 1fr 110px;gap:8px;align-items:center;' +
+        'padding:10px 12px;background:' + (tipoCols[tipoVal]||'#fff') + ';border-radius:8px;border:1px solid var(--gray2)">' +
+        '<span style="font-weight:600;font-size:.85rem">' + u.nome + '</span>' +
+        '<input type="text" id="nota_' + u.id + '" class="form-control" ' +
+        'value="' + escHtml(nota ? nota.nota||'' : '') + '" ' +
+        'placeholder="Nessuna nota..." style="font-size:.85rem">' +
+        '<select id="tipo_' + u.id + '" class="form-control" style="font-size:.82rem" ' +
+        'onchange="this.closest(\'div\').style.background=({nota:\'#DBEAFE\',avviso:\'#FEF3C7\',punizione:\'#FEE2E2\',premio:\'#D1FAE5\'})[this.value]||\' #fff\'">' +
+        '<option value="nota"' + (tipoVal==='nota'?' selected':'') + '>📝 Nota</option>' +
+        '<option value="avviso"' + (tipoVal==='avviso'?' selected':'') + '>⚠️ Avviso</option>' +
+        '<option value="punizione"' + (tipoVal==='punizione'?' selected':'') + '>🚫 Punizione</option>' +
+        '<option value="premio"' + (tipoVal==='premio'?' selected':'') + '>🌟 Premio</option>' +
+        '</select></div>';
+    });
+    html += '</div>';
+  }
+  html += '</div></div>';
+
+  document.getElementById('pageContent').innerHTML = html;
+}
+
+function escHtml(s) {
+  return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function saveAllTesti() {
+  showLoader(true);
+  var saves = [
+    callApi('saveTestiOrdine', {chiave:'testo_intro',    valore: document.getElementById('testo_intro').value}),
+    callApi('saveTestiOrdine', {chiave:'note_operative', valore: document.getElementById('note_operative').value}),
+    callApi('saveTestiOrdine', {chiave:'chiusura_extra', valore: document.getElementById('chiusura_extra').value}),
+  ];
+
+  // Salva note utenti
+  if (S.currentSettimana) {
+    S.utenti.forEach(function(u) {
+      var el = document.getElementById('nota_' + u.id);
+      var tipoEl = document.getElementById('tipo_' + u.id);
+      if (el) {
+        saves.push(callApi('saveNotaUtente', {
+          utente_id: u.id,
+          settimana_id: S.currentSettimana,
+          nota: el.value,
+          tipo: tipoEl ? tipoEl.value : 'nota'
+        }));
+      }
+    });
+  }
+
+  Promise.all(saves).then(function() {
+    // Aggiorna state locale
+    S.testiOrdine.testo_intro    = document.getElementById('testo_intro').value;
+    S.testiOrdine.note_operative = document.getElementById('note_operative').value;
+    S.testiOrdine.chiusura_extra = document.getElementById('chiusura_extra').value;
+    // Ricarica note utenti
+    return callApi('getNoteUtente', {}).then(function(d){ S.noteUtenti = d||[]; });
+  }).then(function() {
+    toast('Testi e note salvati ✓', 'success');
+  }).catch(function(e) {
+    toast('Errore: ' + e.message, 'error');
+  }).finally(function() { showLoader(false); });
 }
 
 // ═══════════════════════════════════════════════════════════════════
