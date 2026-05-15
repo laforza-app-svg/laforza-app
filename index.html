@@ -945,11 +945,39 @@ function apiLocal(action, data) {
 
 // Detect se siamo dentro Apps Script
 var isAppsScript = false; // GitHub Pages mode
-// callApi: tenta Apps Script via JSONP, fallback su mock se non risponde
+
+// Timeout wrapper — se JSONP non risponde entro N secondi usa mock
 function callApi(action, data) {
-  return api(action, data).catch(function(err) {
-    console.warn('Apps Script non raggiungibile, uso dati locali:', err.message);
-    return Promise.resolve(apiLocal(action, data));
+  // Login è sempre locale
+  if (action === 'login') return api(action, data);
+  
+  return new Promise(function(resolve) {
+    var resolved = false;
+    var mockResult = apiLocal(action, data);
+    
+    // Timeout di 5 secondi — se Apps Script non risponde, usa mock
+    var timer = setTimeout(function() {
+      if (!resolved) {
+        resolved = true;
+        console.warn('Timeout Apps Script per', action, '— uso dati locali');
+        resolve(mockResult);
+      }
+    }, 5000);
+    
+    // Tenta Apps Script via JSONP
+    api(action, data).then(function(result) {
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timer);
+        resolve(result);
+      }
+    }).catch(function() {
+      if (!resolved) {
+        resolved = true;
+        clearTimeout(timer);
+        resolve(mockResult);
+      }
+    });
   });
 }
 
