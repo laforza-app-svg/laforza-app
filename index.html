@@ -825,23 +825,73 @@ var S = {
 // ═══════════════════════════════════════════════════════════════════
 var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzZvkqz5vUuPfn7om4p0K_6lpJXSaSG4XAPH0manZ8dKDvbP1dyUg_VAn7-771H1zcw5A/exec';
 
-// Credenziali locali per il login (sincronizzate con UtentiApp nel DB)
+// Credenziali — caricate da Apps Script all'avvio, fallback locale
 var LOCAL_USERS = [
   {username:'gessica',   password:'laforza2026', nome:'Gessica Arancio', ruolo:'admin'},
   {username:'admin',     password:'laforza2026', nome:'Amministratore',  ruolo:'admin'},
   {username:'operatore', password:'laforza123',  nome:'Operatore',       ruolo:'operatore'},
 ];
+var usersLoaded = false;
+
+// Carica utenti da DB all'avvio (JSONP) — aggiorna LOCAL_USERS con i dati reali
+function loadUsersFromDB() {
+  return new Promise(function(resolve) {
+    if (usersLoaded) { resolve(); return; }
+    var cbName = 'cbUsers_' + Date.now();
+    var script = document.createElement('script');
+    var done = false;
+
+    window[cbName] = function(r) {
+      done = true;
+      delete window[cbName];
+      if (script.parentNode) script.parentNode.removeChild(script);
+      if (r && r.data && Array.isArray(r.data) && r.data.length > 0) {
+        LOCAL_USERS = r.data
+          .filter(function(u){ return u.attivo===true||u.attivo==='TRUE'||u.attivo==='true'; })
+          .map(function(u){ return {
+            username: u.username, password: u.password,
+            nome: u.nome, ruolo: u.ruolo
+          }; });
+        usersLoaded = true;
+      }
+      resolve();
+    };
+
+    script.onerror = function() {
+      if (!done) { done=true; delete window[cbName]; resolve(); }
+    };
+
+    script.src = APPS_SCRIPT_URL + '?action=getUtentiApp&data={}&callback=' + cbName;
+    document.head.appendChild(script);
+
+    // Timeout 8s — se non risponde usa il fallback locale
+    setTimeout(function() {
+      if (!done) { done=true; delete window[cbName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+        resolve();
+      }
+    }, 8000);
+  });
+}
 
 function api(action, data) {
-  // Login is handled locally — no server call needed
+  // Login: verifica credenziali (usa lista dal DB se già caricata)
   if (action === 'login') {
     return new Promise(function(resolve) {
-      var d = data || {};
-      var user = LOCAL_USERS.find(function(u) {
-        return u.username === d.username && u.password === d.password;
-      });
-      if (user) resolve({ ok: true, nome: user.nome, ruolo: user.ruolo, username: user.username });
-      else resolve({ ok: false, error: 'Username o password errati' });
+      var doCheck = function() {
+        var d = data || {};
+        var user = LOCAL_USERS.find(function(u) {
+          return u.username === d.username && u.password === d.password;
+        });
+        if (user) resolve({ ok: true, nome: user.nome, ruolo: user.ruolo, username: user.username });
+        else resolve({ ok: false, error: 'Username o password errati' });
+      };
+      // Se utenti non ancora caricati dal DB, caricali prima
+      if (!usersLoaded) {
+        loadUsersFromDB().then(doCheck);
+      } else {
+        doCheck();
+      }
     });
   }
 
@@ -2796,6 +2846,15 @@ function initSheets() {
 //  AUTH — LOGIN / LOGOUT
 // ═══════════════════════════════════════════════════════════════════
 var currentUser = null;
+
+function showErr(msg) {
+  var el = document.getElementById('loginError');
+  if (el) { el.textContent = msg; el.classList.add('show'); }
+}
+function hideErr() {
+  var el = document.getElementById('loginError');
+  if (el) el.classList.remove('show');
+}
 
 function doLogin() {
   var username = document.getElementById('loginUser').value.trim();
