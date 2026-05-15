@@ -669,20 +669,22 @@ var S = {
 // ═══════════════════════════════════════════════════════════════════
 //  API
 // ═══════════════════════════════════════════════════════════════════
+var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzZvkqz5vUuPfn7om4p0K_6lpJXSaSG4XAPH0manZ8dKDvbP1dyUg_VAn7-771H1zcw5A/exec';
+
 function api(action, data) {
   return new Promise(function(resolve, reject) {
-    google.script.run
-      .withSuccessHandler(function(res) {
-        try {
-          var r = typeof res === 'string' ? JSON.parse(res) : res;
-          if (r && r.ok === false) reject(new Error(r.error));
-          else resolve(r && r.data !== undefined ? r.data : r);
-        } catch(e) {
-          resolve(res);
-        }
-      })
-      .withFailureHandler(function(err) { reject(new Error(err.message || 'Errore server')); })
-      .callApi(JSON.stringify({ action: action, data: data || {} }));
+    var url = APPS_SCRIPT_URL + '?action=' + encodeURIComponent(action);
+    fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify({ action: action, data: data || {} })
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(r) {
+      if (r && r.ok === false) reject(new Error(r.error));
+      else resolve(r && r.data !== undefined ? r.data : r);
+    })
+    .catch(function(err) { reject(new Error('Errore connessione: ' + err.message)); });
   });
 }
 
@@ -692,8 +694,8 @@ function apiLocal(action, data) {
 }
 
 // Detect se siamo dentro Apps Script
-var isAppsScript = typeof google !== 'undefined' && typeof google.script !== 'undefined';
-var callApi = isAppsScript ? api : apiLocal;
+var isAppsScript = false; // GitHub Pages mode — uses fetch API
+var callApi = api;
 
 // ═══════════════════════════════════════════════════════════════════
 //  MOCK DATA (per preview fuori Apps Script)
