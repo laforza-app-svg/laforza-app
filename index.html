@@ -794,6 +794,9 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
           <div class="nav-item" onclick="showPage('debiti')" id="nav-debiti">
             <span class="icon">⚖️</span> Debiti/Crediti
           </div>
+          <div class="nav-item" onclick="showPage('presenze_op')" id="nav-presenze_op">
+            <span class="icon">🏖️</span> Ferie & Assenze
+          </div>
           <div class="nav-item" onclick="showPage('testi')" id="nav-testi">
             <span class="icon">✍️</span> Testi Ordine
           </div>
@@ -907,6 +910,7 @@ var S = {
   ruoli: [], presenzeFisse: [],
   testiOrdine: {}, noteUtenti: [],
   ruoliPermessi: [], logAzioni: [],
+  monteFerie: [], richiesteAssenza: [],
   currentPage: 'dashboard',
   currentSettimana: null,
   settimane: [],   // lista settimane generate
@@ -1037,6 +1041,13 @@ function mockData(action) {
   if (action==='generaCalendario') return [];
   if (action==='registraSostituzione') return {ok:true,debito_id:'D'+Date.now()};
   if (action==='saldaDebito') return true;
+  if (action==='getMonteFerie') return [];
+  if (action==='saveMonteFerie') return true;
+  if (action==='getRichiesteAssenza') return [];
+  if (action==='saveRichiestaAssenza') return true;
+  if (action==='approvaRichiesta') return true;
+  if (action==='rifiutaRichiesta') return true;
+  if (action==='getTurniScoperti') return [];
   if (action==='generaCalendarioAutomatico') return {ok:true, settimane:4, assegnazioni:80};
   if (action==='getContatori') return {};
   if (action==='resetContatori') return true;
@@ -1141,6 +1152,7 @@ function applyPermessiMenu() {
     'nav-ruoli':      'ruoli',
     'nav-sostituzioni':'sostituzioni',
     'nav-debiti':     'debiti',
+    'nav-presenze_op': 'presenze_op',
     'nav-testi':      'testi',
     'nav-report':     'report',
   };
@@ -1224,6 +1236,8 @@ function loadAll() {
     callApi('getPresenzeFisse').then(function(d){ S.presenzeFisse = d||[]; }),
     callApi('getTestiOrdine').then(function(d){ S.testiOrdine = d||{}; }),
     callApi('getRuoliPermessi').then(function(d){ S.ruoliPermessi = d||[]; }),
+    callApi('getMonteFerie',{}).then(function(d){ S.monteFerie = d||[]; }),
+    callApi('getRichiesteAssenza',{}).then(function(d){ S.richiesteAssenza = d||[]; }),
     callApi('getNoteUtente',{}).then(function(d){ S.noteUtenti = d||[]; }),
   ]).catch(function(e){ toast('Errore caricamento: '+e.message,'error'); })
     .finally(function(){ showLoader(false); });
@@ -1260,6 +1274,7 @@ function showPage(page) {
     turni:'Turni Operatori', compiti:'Compiti Operatori',
     ruoli:'Ruoli & Competenze', presenze:'Presenze Fisse',
     sostituzioni:'Sostituzioni', debiti:'Debiti & Crediti',
+    presenze_op:'Ferie & Assenze Operatori',
     testi:'Testi & Note Ordine di Servizio',
     permessi:'Gestione Permessi Ruoli', log:'Log Azioni',
     report:'Stampa Report'
@@ -1273,7 +1288,7 @@ function showPage(page) {
     turni: renderTurniOperatori, compiti: renderCompitiOperatori,
     ruoli: renderRuoli, presenze: renderPresenzeFisse,
     sostituzioni: renderSostituzioni, debiti: renderDebiti,
-    testi: renderTestiOrdine, permessi: renderPermessi, log: renderLog, report: renderReport
+    presenze_op: renderPresenzeOp, testi: renderTestiOrdine, permessi: renderPermessi, log: renderLog, report: renderReport
   };
   if (pages[page]) pages[page]();
 }
@@ -2578,6 +2593,316 @@ function printCompitiOperatori() {
   w.document.write('<!DOCTYPE html><html><head><title>Compiti Operatori</title></head><body>'+html+'</body></html>');
   w.document.close(); w.focus();
   setTimeout(function(){ w.print(); }, 600);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  FERIE & ASSENZE OPERATORI
+// ═══════════════════════════════════════════════════════════════════
+var TIPI_ASSENZA = ['Ferie','Malattia','Permesso','Recupero','Lutto','Maternita'];
+var TIPI_ICONS   = {Ferie:'🏖️', Malattia:'🤒', Permesso:'📋', Recupero:'🔄', Lutto:'🖤', Maternita:'👶'};
+var STATO_COLORS = {
+  'In attesa':  '#FEF3C7',
+  'Approvata':  '#D1FAE5',
+  'Rifiutata':  '#FEE2E2',
+};
+var STATO_TEXT = {
+  'In attesa':  '#92400E',
+  'Approvata':  '#065F46',
+  'Rifiutata':  '#C0392B',
+};
+
+function renderPresenzeOp() {
+  var isAdmin = currentUser && (currentUser.ruolo==='admin'||currentUser.ruolo==='Responsabile');
+  var topBtns = '<button class="btn btn-primary" onclick="openRichiestaModal()">+ Nuova Richiesta</button>';
+  if (isAdmin) {
+    topBtns += ' <button class="btn btn-ghost" onclick="showTab(\'monteFerie\')">🎯 Monte Ferie</button>';
+  }
+  document.getElementById('topbarActions').innerHTML = topBtns;
+
+  var html = '';
+
+  // Tab switcher
+  html += '<div class="tabs" style="margin-bottom:16px">' +
+    '<div class="tab active" id="tab-richieste" onclick="showTab(\'richieste\')">📋 Richieste</div>' +
+    '<div class="tab" id="tab-monteFerie" onclick="showTab(\'monteFerie\')">📊 Monte Ferie</div>' +
+    '</div>';
+
+  // Tab richieste
+  html += '<div id="panel-richieste">';
+
+  // Filtri
+  html += '<div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap">' +
+    '<select id="filtroStatoRic" class="form-control" style="width:150px" onchange="renderRichiesteTable()">' +
+    '<option value="">Tutti gli stati</option>' +
+    '<option value="In attesa">⏳ In attesa</option>' +
+    '<option value="Approvata">✅ Approvata</option>' +
+    '<option value="Rifiutata">❌ Rifiutata</option>' +
+    '</select>' +
+    (isAdmin ? '<select id="filtroOpRic" class="form-control" style="width:180px" onchange="renderRichiesteTable()">' +
+      '<option value="">Tutti gli operatori</option>' +
+      S.operatori.map(function(o){ return '<option value="'+o.id+'">'+o.nome+'</option>'; }).join('') +
+      '</select>' : '') +
+    '</div>';
+
+  html += '<div id="richiesteTable"></div>';
+  html += '</div>';
+
+  // Tab monte ferie (inizialmente nascosto)
+  html += '<div id="panel-monteFerie" style="display:none">';
+  html += renderMonteFeriePanel(isAdmin);
+  html += '</div>';
+
+  document.getElementById('pageContent').innerHTML = html;
+  renderRichiesteTable();
+}
+
+function renderRichiesteTable() {
+  var filtroStato = document.getElementById('filtroStatoRic');
+  var filtroOp    = document.getElementById('filtroOpRic');
+  var stato = filtroStato ? filtroStato.value : '';
+  var opId  = filtroOp    ? filtroOp.value    : '';
+  var isAdmin = currentUser && (currentUser.ruolo==='admin'||currentUser.ruolo==='Responsabile');
+
+  var richieste = S.richiesteAssenza.filter(function(r){
+    if (stato && r.stato !== stato) return false;
+    if (opId  && r.operatore_id !== opId) return false;
+    // Non-admin vede solo le proprie
+    if (!isAdmin) {
+      var myOp = S.operatori.find(function(o){ return o.nome === (currentUser.nome||''); });
+      if (myOp && r.operatore_id !== myOp.id) return false;
+    }
+    return true;
+  });
+
+  var html = '';
+  if (richieste.length === 0) {
+    html = '<div class="card"><div class="card-body" style="text-align:center;padding:40px;color:var(--gray3)">' +
+      '<div style="font-size:2.5rem;margin-bottom:10px">📋</div>' +
+      '<p>Nessuna richiesta trovata</p></div></div>';
+  } else {
+    html = '<div style="display:grid;gap:10px">';
+    richieste.forEach(function(r) {
+      var op = S.operatori.find(function(o){ return o.id===r.operatore_id; });
+      var nomeOp = op ? op.nome : r.operatore_id;
+      var bgStato = STATO_COLORS[r.stato] || '#fff';
+      var fgStato = STATO_TEXT[r.stato]   || '#333';
+      var icon    = TIPI_ICONS[r.tipo]    || '📋';
+      html += '<div class="card" style="border-left:4px solid ' +
+        (r.stato==='Approvata'?'#2A7A2A':r.stato==='Rifiutata'?'#C0392B':'#E6A817') + '">' +
+        '<div class="card-body" style="padding:14px 16px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">' +
+        '<div>' +
+        '<div style="font-weight:700;font-size:.95rem;margin-bottom:4px">' + icon + ' ' + nomeOp + '</div>' +
+        '<div style="font-size:.85rem;color:var(--gray4)">' +
+          '<b>' + r.tipo + '</b> &nbsp;|&nbsp; ' +
+          'Dal <b>' + (r.data_inizio||'—') + '</b> al <b>' + (r.data_fine||'—') + '</b>' +
+          ' &nbsp;|&nbsp; <b>' + r.giorni + ' giorni</b>' +
+        '</div>' +
+        (r.motivo ? '<div style="font-size:.82rem;color:var(--gray3);margin-top:4px">Motivo: '+r.motivo+'</div>' : '') +
+        '<div style="font-size:.75rem;color:var(--gray3);margin-top:3px">Richiesta il: '+(r.data_richiesta||'—')+'</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:8px">' +
+        '<span style="background:'+bgStato+';color:'+fgStato+';padding:4px 10px;border-radius:20px;font-size:.78rem;font-weight:700">' +
+          r.stato + '</span>' +
+        (isAdmin && r.stato==='In attesa' ?
+          '<button class="btn btn-sm btn-success" onclick="approvaRich(\''+r.id+'\')">✅ Approva</button>' +
+          '<button class="btn btn-sm btn-danger" onclick="rifiutaRich(\''+r.id+'\')">❌ Rifiuta</button>' : '') +
+        '</div>' +
+        '</div>' +
+        '</div></div>';
+    });
+    html += '</div>';
+  }
+  document.getElementById('richiesteTable').innerHTML = html;
+}
+
+function renderMonteFeriePanel(isAdmin) {
+  var anno = new Date().getFullYear();
+  var html = '';
+
+  if (isAdmin) {
+    html += '<div class="card"><div class="card-header">' +
+      '<span class="card-title">🎯 Monte Ferie ' + anno + '</span>' +
+      '<button class="btn btn-primary btn-sm" onclick="saveMonteFerieAll()">💾 Salva</button>' +
+      '</div><div class="table-wrap"><table>' +
+      '<thead><tr><th>Operatore</th><th>Ruolo</th><th>Giorni Totali</th><th>Usati</th><th>Residui</th></tr></thead><tbody>';
+
+    S.operatori.forEach(function(op) {
+      var mf = S.monteFerie.find(function(m){
+        return m.operatore_id===op.id && String(m.anno)===String(anno);
+      });
+      var totali = mf ? parseInt(mf.giorni_totali)||0 : 0;
+      var usati  = mf ? parseInt(mf.giorni_usati)||0  : 0;
+      var residui= totali - usati;
+      html += '<tr>' +
+        '<td><b>' + op.nome + '</b></td>' +
+        '<td><small style="color:var(--gray3)">' + (op.ruolo||'—') + '</small></td>' +
+        '<td><input type="number" id="mf_'+op.id+'" value="'+totali+'" min="0" max="365" ' +
+          'class="form-control" style="width:80px;padding:4px 8px;font-size:.85rem"></td>' +
+        '<td style="text-align:center;color:var(--red);font-weight:700">' + usati + '</td>' +
+        '<td style="text-align:center;color:' + (residui<=5?'var(--red)':'var(--green)') + ';font-weight:700">' + residui + '</td>' +
+        '</tr>';
+    });
+    html += '</tbody></table></div></div>';
+  } else {
+    // Operatore vede solo i propri
+    var myOp = S.operatori.find(function(o){ return o.nome===(currentUser.nome||''); });
+    if (myOp) {
+      var mf = S.monteFerie.find(function(m){
+        return m.operatore_id===myOp.id && String(m.anno)===String(anno);
+      });
+      var tot = mf ? parseInt(mf.giorni_totali)||0 : 0;
+      var usa = mf ? parseInt(mf.giorni_usati)||0  : 0;
+      html += '<div class="stats-row" style="grid-template-columns:repeat(3,1fr);margin-bottom:16px">' +
+        '<div class="stat-card"><div class="stat-num" style="color:var(--navy)">' + tot + '</div><div class="stat-lbl">Giorni totali</div></div>' +
+        '<div class="stat-card"><div class="stat-num" style="color:var(--red)">' + usa + '</div><div class="stat-lbl">Giorni usati</div></div>' +
+        '<div class="stat-card"><div class="stat-num" style="color:var(--green)">' + (tot-usa) + '</div><div class="stat-lbl">Giorni residui</div></div>' +
+        '</div>';
+    }
+  }
+  return html;
+}
+
+function showTab(tab) {
+  document.getElementById('panel-richieste').style.display   = tab==='richieste'  ? '' : 'none';
+  document.getElementById('panel-monteFerie').style.display  = tab==='monteFerie' ? '' : 'none';
+  document.getElementById('tab-richieste').classList.toggle('active',  tab==='richieste');
+  document.getElementById('tab-monteFerie').classList.toggle('active', tab==='monteFerie');
+}
+
+function openRichiestaModal() {
+  var html = '<div class="form-row">' +
+    '<div class="form-group"><label class="form-label">Tipo assenza</label>' +
+    '<select id="ric_tipo" class="form-control">' +
+    TIPI_ASSENZA.map(function(t){ return '<option>'+t+'</option>'; }).join('') +
+    '</select></div>' +
+    '<div class="form-group"><label class="form-label">Operatore</label>' +
+    '<select id="ric_op" class="form-control">' +
+    S.operatori.map(function(o){ return '<option value="'+o.id+'">'+o.nome+'</option>'; }).join('') +
+    '</select></div></div>' +
+    '<div class="form-row">' +
+    '<div class="form-group"><label class="form-label">Data inizio</label>' +
+    '<input type="date" id="ric_dal" class="form-control" onchange="calcolaGiorni()"></div>' +
+    '<div class="form-group"><label class="form-label">Data fine</label>' +
+    '<input type="date" id="ric_al" class="form-control" onchange="calcolaGiorni()"></div></div>' +
+    '<div class="form-group"><label class="form-label">Giorni lavorativi</label>' +
+    '<input type="number" id="ric_giorni" class="form-control" min="1" value="1" readonly></div>' +
+    '<div class="form-group"><label class="form-label">Motivo (opzionale)</label>' +
+    '<input type="text" id="ric_motivo" class="form-control" placeholder="Es: Visita medica, Vacanza..."></div>';
+
+  openModal('Nuova Richiesta Assenza', html, [
+    {label:'Annulla', cls:'btn-ghost', action:'closeModal()'},
+    {label:'Invia Richiesta', cls:'btn-primary', action:'submitRichiesta()'},
+  ]);
+}
+
+function calcolaGiorni() {
+  var dal = document.getElementById('ric_dal').value;
+  var al  = document.getElementById('ric_al').value;
+  if (!dal || !al) return;
+  var d1 = new Date(dal), d2 = new Date(al);
+  if (d2 < d1) { document.getElementById('ric_giorni').value = 0; return; }
+  // Conta giorni lavorativi (lun-sab, escludi dom)
+  var count = 0;
+  var cur = new Date(d1);
+  while (cur <= d2) {
+    if (cur.getDay() !== 0) count++;
+    cur.setDate(cur.getDate()+1);
+  }
+  document.getElementById('ric_giorni').value = count;
+}
+
+function submitRichiesta() {
+  var tipo   = document.getElementById('ric_tipo').value;
+  var opId   = document.getElementById('ric_op').value;
+  var dal    = document.getElementById('ric_dal').value;
+  var al     = document.getElementById('ric_al').value;
+  var giorni = parseInt(document.getElementById('ric_giorni').value)||1;
+  var motivo = document.getElementById('ric_motivo').value;
+
+  if (!dal || !al) { toast('Inserisci le date','error'); return; }
+  if (giorni <= 0) { toast('Date non valide','error'); return; }
+
+  showLoader(true);
+  callApi('saveRichiestaAssenza', {
+    operatore_id: opId,
+    tipo: tipo,
+    data_inizio: dal,
+    data_fine: al,
+    giorni: giorni,
+    motivo: motivo,
+    stato: 'In attesa',
+  }).then(function(){
+    return callApi('getRichiesteAssenza',{}).then(function(d){ S.richiesteAssenza=d||[]; });
+  }).then(function(){
+    closeModal();
+    logAction('nuova_richiesta','presenze_op', tipo+' '+dal+' - '+al);
+    toast('Richiesta inviata ✓','success');
+    renderRichiesteTable();
+  }).catch(function(e){ toast('Errore: '+e.message,'error'); })
+    .finally(function(){ showLoader(false); });
+}
+
+function approvaRich(id) {
+  if (!confirm('Approvare questa richiesta?')) return;
+  showLoader(true);
+  callApi('approvaRichiesta', {id:id, approvato_da: currentUser ? currentUser.username : 'admin'})
+    .then(function(){
+      return callApi('getRichiesteAssenza',{}).then(function(d){ S.richiesteAssenza=d||[]; });
+    }).then(function(){
+      return callApi('getMonteFerie',{}).then(function(d){ S.monteFerie=d||[]; });
+    }).then(function(){
+      logAction('approva_richiesta','presenze_op', id);
+      toast('Richiesta approvata ✓','success');
+      renderRichiesteTable();
+    }).catch(function(e){ toast('Errore: '+e.message,'error'); })
+      .finally(function(){ showLoader(false); });
+}
+
+function rifiutaRich(id) {
+  var motivo = prompt('Motivo del rifiuto (opzionale):','');
+  if (motivo === null) return;
+  showLoader(true);
+  callApi('rifiutaRichiesta', {id:id, motivo_rifiuto: motivo})
+    .then(function(){
+      return callApi('getRichiesteAssenza',{}).then(function(d){ S.richiesteAssenza=d||[]; });
+    }).then(function(){
+      logAction('rifiuta_richiesta','presenze_op', id);
+      toast('Richiesta rifiutata','success');
+      renderRichiesteTable();
+    }).catch(function(e){ toast('Errore: '+e.message,'error'); })
+      .finally(function(){ showLoader(false); });
+}
+
+function saveMonteFerieAll() {
+  showLoader(true);
+  var anno = new Date().getFullYear();
+  var saves = [];
+  S.operatori.forEach(function(op){
+    var el = document.getElementById('mf_'+op.id);
+    if (!el) return;
+    var tot = parseInt(el.value)||0;
+    var existing = S.monteFerie.find(function(m){
+      return m.operatore_id===op.id && String(m.anno)===String(anno);
+    });
+    var usati = existing ? parseInt(existing.giorni_usati)||0 : 0;
+    saves.push(callApi('saveMonteFerie', {
+      id: existing ? existing.id : 'MF_'+op.id+'_'+anno,
+      operatore_id: op.id,
+      anno: anno,
+      giorni_totali: tot,
+      giorni_usati: usati,
+      aggiornato: new Date().toLocaleDateString('it-IT'),
+    }));
+  });
+  Promise.all(saves).then(function(){
+    return callApi('getMonteFerie',{}).then(function(d){ S.monteFerie=d||[]; });
+  }).then(function(){
+    logAction('salva_monte_ferie','presenze_op','Anno '+anno);
+    toast('Monte ferie salvato ✓','success');
+    showTab('monteFerie');
+  }).catch(function(e){ toast('Errore: '+e.message,'error'); })
+    .finally(function(){ showLoader(false); });
 }
 
 // ═══════════════════════════════════════════════════════════════════
