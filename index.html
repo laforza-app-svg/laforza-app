@@ -1697,9 +1697,21 @@ function showGeneraModal() {
 }
 
 function generaCalendario() {
-  var anno = parseInt(getVal('gen_anno'));
-  var mese = parseInt(getVal('gen_mese'));
-  if (!anno || !mese) { toast('Inserisci anno e mese','error'); return; }
+  try {
+    var anno = parseInt(getVal('gen_anno'));
+    var mese = parseInt(getVal('gen_mese'));
+    console.log('Genera:', anno, mese);
+    if (!anno || !mese) { toast('Inserisci anno e mese','error'); return; }
+  } catch(ex) {
+    console.error('getVal error:', ex);
+    // Fallback: leggi direttamente dal DOM
+    var annoEl = document.getElementById('gen_anno');
+    var meseEl = document.getElementById('gen_mese');
+    if (!annoEl || !meseEl) { toast('Campi non trovati','error'); return; }
+    var anno = parseInt(annoEl.value);
+    var mese = parseInt(meseEl.value);
+    if (!anno || !mese) { toast('Inserisci anno e mese','error'); return; }
+  }
   showLoader(true);
   callApi('generaCalendarioAutomatico', { anno: anno, mese: mese, utenti: S.utenti }).then(function(result) {
     // result = {ok:true, settimane:N, assegnazioni:N}
