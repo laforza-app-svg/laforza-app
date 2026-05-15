@@ -1,0 +1,2643 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="La Forza">
+<meta name="theme-color" content="#1A3A5C">
+<title>La Forza — Gestione Comunità</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   VARIABILI & RESET
+═══════════════════════════════════════════ */
+:root {
+  --navy:    #1A3A5C;
+  --blue:    #2C5F8A;
+  --sky:     #4A90C4;
+  --green:   #2A7A2A;
+  --mint:    #E2F4E2;
+  --amber:   #E6A817;
+  --red:     #C0392B;
+  --cream:   #F9F6F0;
+  --white:   #FFFFFF;
+  --gray1:   #F4F4F2;
+  --gray2:   #E0DDD8;
+  --gray3:   #9E9B95;
+  --gray4:   #5A5752;
+  --text:    #1C1A18;
+  --shadow:  0 2px 12px rgba(26,58,92,.13);
+  --shadow2: 0 8px 32px rgba(26,58,92,.18);
+  --radius:  10px;
+  --trans:   all .2s cubic-bezier(.4,0,.2,1);
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 15px; }
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--cream);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+/* ═══════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════ */
+.app { display: flex; min-height: 100vh; }
+
+/* Sidebar */
+.sidebar {
+  width: 240px; min-height: 100vh;
+  background: var(--navy);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0;
+  z-index: 100;
+  box-shadow: 4px 0 20px rgba(0,0,0,.2);
+}
+.sidebar-logo {
+  padding: 28px 20px 20px;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+}
+.sidebar-logo h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.5rem; color: var(--white);
+  line-height: 1.1;
+}
+.sidebar-logo p {
+  font-size: .72rem; color: rgba(255,255,255,.5);
+  margin-top: 4px; letter-spacing: .06em; text-transform: uppercase;
+}
+.sidebar nav { flex: 1; padding: 16px 0; }
+.nav-section {
+  padding: 8px 16px 4px;
+  font-size: .65rem; color: rgba(255,255,255,.35);
+  letter-spacing: .1em; text-transform: uppercase; font-weight: 600;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 20px; cursor: pointer;
+  color: rgba(255,255,255,.7); font-size: .88rem;
+  transition: var(--trans); border-left: 3px solid transparent;
+  user-select: none;
+}
+.nav-item:hover { background: rgba(255,255,255,.07); color: var(--white); }
+.nav-item.active {
+  background: rgba(255,255,255,.12); color: var(--white);
+  border-left-color: var(--sky);
+}
+.nav-item .icon { font-size: 1.1rem; width: 20px; text-align: center; }
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid rgba(255,255,255,.1);
+  font-size: .72rem; color: rgba(255,255,255,.35);
+  text-align: center;
+}
+
+/* Main */
+.main {
+  margin-left: 240px; flex: 1;
+  display: flex; flex-direction: column; min-height: 100vh;
+}
+.topbar {
+  background: var(--white); border-bottom: 1px solid var(--gray2);
+  padding: 14px 28px; display: flex; align-items: center;
+  justify-content: space-between; position: sticky; top: 0; z-index: 50;
+  box-shadow: 0 1px 4px rgba(0,0,0,.06);
+}
+.topbar-title { font-size: 1.1rem; font-weight: 600; color: var(--navy); }
+.topbar-actions { display: flex; gap: 10px; }
+.content { padding: 28px; flex: 1; }
+
+/* ═══════════════════════════════════════════
+   COMPONENTI
+═══════════════════════════════════════════ */
+/* Card */
+.card {
+  background: var(--white); border-radius: var(--radius);
+  box-shadow: var(--shadow); margin-bottom: 20px; overflow: hidden;
+}
+.card-header {
+  padding: 16px 20px; border-bottom: 1px solid var(--gray2);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.card-title { font-weight: 600; font-size: .95rem; color: var(--navy); }
+.card-body { padding: 20px; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 16px; border-radius: 7px;
+  font-family: inherit; font-size: .85rem; font-weight: 500;
+  cursor: pointer; border: none; transition: var(--trans);
+  white-space: nowrap;
+}
+.btn-primary { background: var(--blue); color: var(--white); }
+.btn-primary:hover { background: var(--navy); }
+.btn-success { background: var(--green); color: var(--white); }
+.btn-success:hover { background: #1f5c1f; }
+.btn-amber { background: var(--amber); color: var(--white); }
+.btn-amber:hover { background: #c8900f; }
+.btn-danger { background: var(--red); color: var(--white); }
+.btn-danger:hover { background: #a93226; }
+.btn-ghost {
+  background: transparent; color: var(--gray4);
+  border: 1px solid var(--gray2);
+}
+.btn-ghost:hover { background: var(--gray1); color: var(--navy); }
+.btn-sm { padding: 5px 11px; font-size: .78rem; }
+.btn-icon { padding: 7px; min-width: 32px; justify-content: center; }
+
+/* Badge */
+.badge {
+  display: inline-block; padding: 2px 8px; border-radius: 20px;
+  font-size: .72rem; font-weight: 600; letter-spacing: .03em;
+}
+.badge-f1 { background: #FEF3C7; color: #92400E; }
+.badge-f2 { background: #DBEAFE; color: #1E40AF; }
+.badge-f3 { background: #D1FAE5; color: #065F46; }
+.badge-open   { background: #FEE2E2; color: var(--red); }
+.badge-closed { background: #D1FAE5; color: var(--green); }
+
+/* Form */
+.form-group { margin-bottom: 16px; }
+.form-label { display: block; font-size: .82rem; font-weight: 500; color: var(--gray4); margin-bottom: 6px; }
+.form-control {
+  width: 100%; padding: 9px 13px;
+  border: 1px solid var(--gray2); border-radius: 7px;
+  font-family: inherit; font-size: .88rem; color: var(--text);
+  background: var(--white); transition: var(--trans);
+  outline: none;
+}
+.form-control:focus { border-color: var(--sky); box-shadow: 0 0 0 3px rgba(74,144,196,.15); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+/* Table */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .85rem; }
+thead th {
+  background: var(--navy); color: var(--white);
+  padding: 10px 14px; text-align: left; font-weight: 600;
+  font-size: .78rem; letter-spacing: .04em; text-transform: uppercase;
+  white-space: nowrap;
+}
+tbody tr { border-bottom: 1px solid var(--gray2); transition: var(--trans); }
+tbody tr:hover { background: var(--gray1); }
+tbody td { padding: 10px 14px; vertical-align: middle; }
+.actions { display: flex; gap: 6px; }
+
+/* Tabs */
+.tabs { display: flex; gap: 2px; border-bottom: 2px solid var(--gray2); margin-bottom: 20px; }
+.tab {
+  padding: 10px 18px; cursor: pointer; font-size: .88rem;
+  font-weight: 500; color: var(--gray4);
+  border-bottom: 2px solid transparent; margin-bottom: -2px;
+  transition: var(--trans);
+}
+.tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+.tab:hover:not(.active) { color: var(--navy); }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* Modal */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.45); z-index: 999;
+  align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--white); border-radius: 12px;
+  box-shadow: var(--shadow2); width: 480px; max-width: 94vw;
+  max-height: 88vh; overflow-y: auto; animation: modalIn .22s ease;
+}
+@keyframes modalIn {
+  from { transform: scale(.95) translateY(10px); opacity: 0; }
+  to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+.modal-header {
+  padding: 18px 22px; border-bottom: 1px solid var(--gray2);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-title { font-weight: 700; font-size: 1rem; color: var(--navy); }
+.modal-close { background: none; border: none; font-size: 1.3rem; cursor: pointer; color: var(--gray3); }
+.modal-body { padding: 22px; }
+.modal-footer { padding: 14px 22px; border-top: 1px solid var(--gray2); display: flex; justify-content: flex-end; gap: 10px; }
+
+/* Calendar grid */
+.cal-grid {
+  display: grid;
+  grid-template-columns: 180px repeat(7, 1fr);
+  border: 1px solid var(--gray2); border-radius: var(--radius);
+  overflow: hidden; font-size: .78rem;
+}
+.cal-cell {
+  padding: 8px 10px; border-right: 1px solid var(--gray2);
+  border-bottom: 1px solid var(--gray2);
+}
+.cal-cell:last-child { border-right: none; }
+.cal-head {
+  background: var(--navy); color: var(--white);
+  font-weight: 600; text-align: center; padding: 10px 6px;
+  font-size: .75rem; letter-spacing: .04em; text-transform: uppercase;
+}
+.cal-zone { background: var(--gray1); font-weight: 600; color: var(--navy); font-size: .77rem; }
+.cal-name {
+  cursor: pointer; transition: var(--trans);
+  border-radius: 5px; padding: 4px 6px; text-align: center;
+  min-height: 28px; display: flex; align-items: center; justify-content: center;
+}
+.cal-name:hover { background: var(--sky); color: var(--white); }
+.cal-name.substituted { background: #FEF3C7; color: #92400E; font-style: italic; }
+.cal-name.has-debt { background: #FEE2E2; color: var(--red); }
+.week-selector { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+.week-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--navy); color: var(--white);
+  padding: 6px 14px; border-radius: 20px; font-size: .82rem; font-weight: 600;
+}
+
+/* Debiti */
+.debt-card {
+  border: 1px solid var(--gray2); border-radius: 8px;
+  padding: 14px 16px; margin-bottom: 10px;
+  display: flex; align-items: center; justify-content: space-between;
+  transition: var(--trans);
+}
+.debt-card:hover { box-shadow: var(--shadow); }
+.debt-card.open   { border-left: 4px solid var(--red); }
+.debt-card.closed { border-left: 4px solid var(--green); opacity: .65; }
+.debt-info { flex: 1; }
+.debt-title { font-weight: 600; font-size: .88rem; }
+.debt-sub   { font-size: .78rem; color: var(--gray3); margin-top: 3px; }
+
+/* Stats */
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+.stat-card {
+  background: var(--white); border-radius: var(--radius);
+  padding: 18px 20px; box-shadow: var(--shadow);
+  display: flex; align-items: center; gap: 14px;
+}
+.stat-icon {
+  width: 44px; height: 44px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.3rem;
+}
+.stat-num { font-size: 1.6rem; font-weight: 700; color: var(--navy); line-height: 1; }
+.stat-lbl { font-size: .75rem; color: var(--gray3); margin-top: 3px; }
+
+/* Toast */
+.toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  background: var(--navy); color: var(--white);
+  padding: 12px 20px; border-radius: 8px; font-size: .85rem;
+  box-shadow: var(--shadow2); animation: toastIn .25s ease;
+  min-width: 200px;
+}
+.toast.success { background: var(--green); }
+.toast.error   { background: var(--red); }
+@keyframes toastIn { from { transform: translateX(60px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+/* ═══════════════════════════════════════════
+   LOADING
+═══════════════════════════════════════════ */
+.spinner {
+  display: inline-block; width: 18px; height: 18px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: var(--white);
+  border-radius: 50%; animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(249,246,240,.7); z-index: 900;
+  align-items: center; justify-content: center;
+  flex-direction: column; gap: 14px;
+}
+.loading-overlay.show { display: flex; }
+.loading-spinner {
+  width: 40px; height: 40px;
+  border: 3px solid var(--gray2); border-top-color: var(--blue);
+  border-radius: 50%; animation: spin .8s linear infinite;
+}
+
+/* ═══════════════════════════════════════════
+   STAMPA
+═══════════════════════════════════════════ */
+.print-controls {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  margin-bottom: 20px; align-items: center;
+}
+.format-btn {
+  padding: 7px 14px; border: 1px solid var(--gray2);
+  border-radius: 6px; cursor: pointer; font-size: .82rem;
+  transition: var(--trans); background: var(--white);
+}
+.format-btn.active { background: var(--navy); color: var(--white); border-color: var(--navy); }
+
+
+/* ═══════════════════════════════════════════
+   HAMBURGER
+═══════════════════════════════════════════ */
+.hamburger {
+  display: none; flex-direction: column;
+  justify-content: center; gap: 5px;
+  width: 40px; height: 40px; cursor: pointer;
+  background: none; border: none; padding: 6px;
+  border-radius: 8px; flex-shrink: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.hamburger span {
+  display: block; height: 2px; width: 22px;
+  background: var(--navy); border-radius: 2px;
+  transition: var(--trans);
+}
+.hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity: 0; }
+.hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
+.sidebar-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.5); z-index: 198;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+.sidebar-overlay.open { display: block; }
+
+/* ═══════════════════════════════════════════
+   BOTTOM NAV (mobile only)
+═══════════════════════════════════════════ */
+.bottom-nav {
+  display: none;
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--white);
+  border-top: 1px solid var(--gray2);
+  z-index: 150;
+  padding: 4px 0 max(4px, env(safe-area-inset-bottom));
+  box-shadow: 0 -4px 20px rgba(0,0,0,.08);
+}
+.bottom-nav-inner {
+  display: flex; justify-content: space-around;
+  align-items: center; max-width: 600px; margin: 0 auto;
+}
+.bnav-item {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 2px; padding: 6px 10px; cursor: pointer;
+  border-radius: 10px; transition: var(--trans);
+  min-width: 52px; border: none; background: none;
+  -webkit-tap-highlight-color: transparent;
+  color: var(--gray3); font-size: .62rem; font-weight: 500;
+  font-family: inherit;
+}
+.bnav-item .bnav-icon { font-size: 1.3rem; line-height: 1; }
+.bnav-item.active { color: var(--blue); }
+.bnav-item.active .bnav-icon { transform: scale(1.1); }
+
+/* ═══════════════════════════════════════════
+   TABLET (≤ 1024px)
+═══════════════════════════════════════════ */
+@media (max-width: 1024px) {
+  .sidebar { width: 200px; }
+  .main { margin-left: 200px; }
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .content { padding: 18px; }
+}
+
+/* ═══════════════════════════════════════════
+   MOBILE (≤ 768px)
+═══════════════════════════════════════════ */
+@media (max-width: 768px) {
+  /* Sidebar: off-canvas */
+  .sidebar {
+    width: 280px; max-width: 80vw;
+    transform: translateX(-100%);
+    transition: transform .3s cubic-bezier(.4,0,.2,1);
+    z-index: 200;
+  }
+  .sidebar.open { transform: translateX(0); box-shadow: 8px 0 40px rgba(0,0,0,.3); }
+
+  /* Main: full width, pad bottom for bottom nav */
+  .main { margin-left: 0; }
+  .content {
+    padding: 12px 12px 80px;
+  }
+
+  /* Topbar */
+  .topbar { padding: 10px 12px; gap: 8px; min-height: 52px; }
+  .hamburger { display: flex; }
+  .topbar-title { font-size: .92rem; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .topbar-actions { gap: 6px; }
+  .topbar-actions .btn { font-size: .72rem; padding: 6px 9px; }
+  .topbar-actions .btn span:not(.icon) { display: none; } /* hide text, show only icon on very small */
+
+  /* Show bottom nav */
+  .bottom-nav { display: block; }
+
+  /* Stats: 2 cols */
+  .stats-row { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .stat-card { padding: 12px; gap: 10px; }
+  .stat-num { font-size: 1.25rem; }
+  .stat-icon { width: 34px; height: 34px; font-size: .95rem; border-radius: 8px; }
+  .stat-lbl { font-size: .68rem; }
+
+  /* Cards */
+  .card { margin-bottom: 12px; border-radius: 8px; }
+  .card-header { padding: 12px 14px; flex-wrap: wrap; gap: 6px; }
+  .card-title { font-size: .88rem; }
+  .card-body { padding: 12px 14px; }
+
+  /* Form */
+  .form-row { grid-template-columns: 1fr; gap: 0; }
+  .form-group { margin-bottom: 12px; }
+  .form-control { padding: 10px 12px; font-size: 16px !important; } /* 16px prevents zoom on iOS */
+  .form-label { font-size: .8rem; }
+
+  /* Modal: bottom sheet on mobile */
+  .modal-overlay.open { align-items: flex-end; padding: 0; }
+  .modal {
+    width: 100vw; max-width: 100vw;
+    border-radius: 16px 16px 0 0;
+    max-height: 90vh;
+    margin: 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .modal-header { padding: 14px 18px; }
+  .modal-body { padding: 14px 18px; }
+  .modal-footer { padding: 12px 18px; flex-wrap: wrap; gap: 8px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+  .modal-footer .btn { flex: 1; min-width: 100px; justify-content: center; }
+
+  /* Tables */
+  .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 0; }
+  table { font-size: .78rem; }
+  thead th { padding: 8px 10px; font-size: .68rem; white-space: nowrap; }
+  tbody td { padding: 8px 10px; }
+  .actions { gap: 4px; }
+  .btn-sm { padding: 5px 9px; font-size: .72rem; }
+
+  /* Calendar */
+  .cal-grid { grid-template-columns: 100px repeat(7, minmax(70px, 1fr)); font-size: .68rem; }
+  .cal-cell { padding: 4px 3px; }
+  .cal-name { font-size: .62rem; min-height: 24px; }
+  .cal-head { font-size: .65rem; padding: 6px 3px; }
+
+  /* Week selector */
+  .week-selector { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; padding-bottom: 6px; }
+  .week-badge { font-size: .72rem; padding: 5px 10px; white-space: nowrap; flex-shrink: 0; }
+
+  /* Tabs */
+  .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; }
+  .tab { white-space: nowrap; flex-shrink: 0; padding: 8px 14px; font-size: .8rem; }
+
+  /* Debt cards */
+  .debt-card { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
+
+  /* Dashboard two-col → one col */
+  div[style*="grid-template-columns:1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Buttons in topbar actions: show icon only on ≤480px */
+  .btn-text-hide { display: none; }
+
+  /* Print controls */
+  .print-controls { gap: 6px; flex-wrap: wrap; }
+  .format-btn { padding: 6px 10px; font-size: .75rem; }
+}
+
+/* ═══════════════════════════════════════════
+   SMALL PHONE (≤ 420px)
+═══════════════════════════════════════════ */
+@media (max-width: 420px) {
+  .stats-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .content { padding: 10px 10px 76px; }
+  .topbar-actions .btn { padding: 5px 8px; font-size: .7rem; }
+  .card-header { padding: 10px 12px; }
+  .card-body { padding: 10px 12px; }
+  .bnav-item { padding: 5px 6px; min-width: 44px; font-size: .58rem; }
+  .bnav-item .bnav-icon { font-size: 1.15rem; }
+}
+
+@media print {
+  body { background: white; font-size: 10pt; }
+  .sidebar, .topbar, .no-print { display: none !important; }
+  .main { margin-left: 0 !important; }
+  .content { padding: 0 !important; }
+  .print-area { display: block !important; }
+  
+  .print-a4-landscape { size: A4 landscape; }
+  .print-a3-landscape { size: A3 landscape; }
+  .print-a3-portrait  { size: A3 portrait; }
+
+  .cal-grid { font-size: 7pt; border: 1pt solid #ccc; }
+  .cal-head  { background: #1A3A5C !important; color: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .cal-zone  { background: #F4F4F2 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .print-header { margin-bottom: 12pt; }
+  .print-header h2 { font-size: 14pt; }
+  .print-header p  { font-size: 9pt; }
+}
+.print-area { display: none; }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <p style="color:var(--gray4);font-size:.88rem">Caricamento...</p>
+</div>
+
+<!-- TOAST -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- APP -->
+<div class="app">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h1>La Forza</h1>
+      <p>Gestione Comunità</p>
+    </div>
+    <nav>
+      <div class="nav-section">Panoramica</div>
+      <div class="nav-item active" onclick="showPage('dashboard')" id="nav-dashboard">
+        <span class="icon">📊</span> Dashboard
+      </div>
+      <div class="nav-section">Anagrafica</div>
+      <div class="nav-item" onclick="showPage('utenti')" id="nav-utenti">
+        <span class="icon">👤</span> Utenti
+      </div>
+      <div class="nav-item" onclick="showPage('operatori')" id="nav-operatori">
+        <span class="icon">🧑‍⚕️</span> Operatori
+      </div>
+      <div class="nav-item" onclick="showPage('mansioni')" id="nav-mansioni">
+        <span class="icon">🔧</span> Mansioni
+      </div>
+      <div class="nav-section">Pianificazione</div>
+      <div class="nav-item" onclick="showPage('calendario')" id="nav-calendario">
+        <span class="icon">📅</span> Calendario Utenti
+      </div>
+      <div class="nav-item" onclick="showPage('turni')" id="nav-turni">
+        <span class="icon">🗓️</span> Turni Operatori
+      </div>
+      <div class="nav-item" onclick="showPage('presenze')" id="nav-presenze">
+        <span class="icon">📆</span> Presenze Fisse
+      </div>
+      <div class="nav-item" onclick="showPage('compiti')" id="nav-compiti">
+        <span class="icon">📋</span> Compiti Operatori
+      </div>
+      <div class="nav-item" onclick="showPage('ruoli')" id="nav-ruoli">
+        <span class="icon">🎖️</span> Ruoli & Competenze
+      </div>
+      <div class="nav-item" onclick="showPage('sostituzioni')" id="nav-sostituzioni">
+        <span class="icon">🔄</span> Sostituzioni
+      </div>
+      <div class="nav-item" onclick="showPage('debiti')" id="nav-debiti">
+        <span class="icon">⚖️</span> Debiti/Crediti
+      </div>
+      <div class="nav-section">Report</div>
+      <div class="nav-item" onclick="showPage('report')" id="nav-report">
+        <span class="icon">🖨️</span> Stampa Report
+      </div>
+    </nav>
+    <div class="sidebar-footer">Comunità La Forza © 2025</div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="Menu">
+        <span></span><span></span><span></span>
+      </button>
+      <span class="topbar-title" id="pageTitle">Dashboard</span>
+      <div class="topbar-actions" id="topbarActions"></div>
+    </div>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+    <!-- BOTTOM NAV (mobile) -->
+    <nav class="bottom-nav" id="bottomNav">
+      <div class="bottom-nav-inner">
+        <button class="bnav-item active" id="bnav-dashboard" onclick="showPage('dashboard')">
+          <span class="bnav-icon">📊</span><span>Home</span>
+        </button>
+        <button class="bnav-item" id="bnav-utenti" onclick="showPage('utenti')">
+          <span class="bnav-icon">👤</span><span>Utenti</span>
+        </button>
+        <button class="bnav-item" id="bnav-calendario" onclick="showPage('calendario')">
+          <span class="bnav-icon">📅</span><span>Calendario</span>
+        </button>
+        <button class="bnav-item" id="bnav-turni" onclick="showPage('turni')">
+          <span class="bnav-icon">🗓️</span><span>Turni</span>
+        </button>
+        <button class="bnav-item" id="bnav-more" onclick="toggleSidebar()">
+          <span class="bnav-icon">☰</span><span>Menu</span>
+        </button>
+      </div>
+    </nav>
+    <div class="content" id="pageContent"></div>
+  </main>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalBox">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">Titolo</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+    <div class="modal-footer" id="modalFooter"></div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════════════
+var S = {
+  utenti: [], operatori: [], mansioni: [],
+  calendario: [], debiti: [],
+  turniOperatori: [], compitiOperatori: [], compitiTipi: [],
+  ruoli: [], presenzeFisse: [],
+  currentPage: 'dashboard',
+  currentSettimana: null,
+  settimane: [],   // lista settimane generate
+};
+
+// ═══════════════════════════════════════════════════════════════════
+//  API
+// ═══════════════════════════════════════════════════════════════════
+function api(action, data) {
+  return new Promise(function(resolve, reject) {
+    google.script.run
+      .withSuccessHandler(function(res) {
+        try {
+          var r = typeof res === 'string' ? JSON.parse(res) : res;
+          if (r && r.ok === false) reject(new Error(r.error));
+          else resolve(r && r.data !== undefined ? r.data : r);
+        } catch(e) {
+          resolve(res);
+        }
+      })
+      .withFailureHandler(function(err) { reject(new Error(err.message || 'Errore server')); })
+      .callApi(JSON.stringify({ action: action, data: data || {} }));
+  });
+}
+
+// Per test in locale (senza Apps Script) usa dati mock
+function apiLocal(action, data) {
+  return Promise.resolve(mockData(action, data));
+}
+
+// Detect se siamo dentro Apps Script
+var isAppsScript = typeof google !== 'undefined' && typeof google.script !== 'undefined';
+var callApi = isAppsScript ? api : apiLocal;
+
+// ═══════════════════════════════════════════════════════════════════
+//  MOCK DATA (per preview fuori Apps Script)
+// ═══════════════════════════════════════════════════════════════════
+function mockData(action) {
+  var u = [
+    {id:'U01',nome:'Elbio Enrique Quenon',fascia:'F2',attivo:true},
+    {id:'U02',nome:'Giuseppe Mesia',fascia:'F3',attivo:true},
+    {id:'U03',nome:'Salvatore Argento',fascia:'F1',attivo:true},
+    {id:'U04',nome:'Nino Mustacciolo',fascia:'F3',attivo:true},
+    {id:'U05',nome:'Piero Misterio Oriti',fascia:'F2',attivo:true},
+    {id:'U06',nome:'Giovanni Puccio',fascia:'F3',attivo:true},
+    {id:'U07',nome:'Pietro Covello',fascia:'F2',attivo:true},
+    {id:'U08',nome:'Rosario Marasà',fascia:'F3',attivo:true},
+    {id:'U09',nome:'Roberto Mendolia',fascia:'F1',attivo:true},
+    {id:'U10',nome:'Giuseppe Marino',fascia:'F2',attivo:true},
+    {id:'U11',nome:'Gabriele Torretta',fascia:'F2',attivo:true},
+    {id:'U12',nome:'Gaetano Laiola',fascia:'F1',attivo:true},
+    {id:'U13',nome:'Calogero La Rosa',fascia:'F3',attivo:true},
+    {id:'U14',nome:'Ottavio Trentacoste',fascia:'F2',attivo:true},
+    {id:'U15',nome:'Forte Salvatore',fascia:'F2',attivo:true},
+    {id:'U16',nome:'Paolo Marino',fascia:'F1',attivo:true},
+    {id:'U17',nome:'Federico Addolorato',fascia:'F2',attivo:true},
+    {id:'U18',nome:'Zora Roberto',fascia:'F1',attivo:true},
+    {id:'U19',nome:'Ferrera Mario',fascia:'F1',attivo:true},
+    {id:'U20',nome:'Francesco Lo Piccolo',fascia:'F2',attivo:true},
+  ];
+  var op = [
+    {id:'OP1',nome:'Gessica Arancio',ruolo:'Responsabile',attivo:true},
+    {id:'OP2',nome:'Operatore 2',ruolo:'Educatore',attivo:true},
+    {id:'OP3',nome:'Operatore 3',ruolo:'Infermiere',attivo:true},
+  ];
+  var m = [
+    {id:'M01',zona:'Sala',descrizione:'Sala Terapeutico-Riabilitativa / Sala Relax',fascia_min:'F1'},
+    {id:'M02',zona:'Ufficio',descrizione:'Ufficio / Sala Colloqui',fascia_min:'F1'},
+    {id:'M03',zona:'Atrio',descrizione:'Atrio Esterno – Entrata – Cortile',fascia_min:'F1'},
+    {id:'M04',zona:'Anfiteatro',descrizione:'Anfiteatro',fascia_min:'F1'},
+    {id:'M05',zona:'Corridoi',descrizione:'Corridoi',fascia_min:'F1'},
+    {id:'M07',zona:'Cucina',descrizione:'Pulizia Cucina',fascia_min:'F1'},
+    {id:'M08',zona:'Mensa',descrizione:'Apparecchio-Sparecchio e Pulizia Sala Mensa',fascia_min:'F1'},
+    {id:'M10',zona:'Cucina',descrizione:'Pranzo Cena Colazione e Merende',fascia_min:'F2'},
+    {id:'M13',zona:'Responsabilità',descrizione:'Responsabile Lavanderia',fascia_min:'F2'},
+    {id:'M16',zona:'Responsabilità',descrizione:'Supervisore',fascia_min:'F3'},
+  ];
+  var d = [
+    {id:'D001',creditore_id:'U06',creditore_nome:'Giovanni Puccio',debitore_id:'U03',debitore_nome:'Salvatore Argento',mansione_ref:'M07',settimana_ref:'SETT_2025_05_2',data_creazione:'12/05/2025',stato:'aperto'},
+    {id:'D002',creditore_id:'U08',creditore_nome:'Rosario Marasà',debitore_id:'U14',debitore_nome:'Ottavio Trentacoste',mansione_ref:'M10',settimana_ref:'SETT_2025_05_1',data_creazione:'05/05/2025',stato:'saldato',data_saldo:'09/05/2025'},
+  ];
+  if (action==='getUtenti') return u;
+  if (action==='getOperatori') return op;
+  if (action==='getMansioni') return m;
+  if (action==='getDebiti') return d;
+  if (action==='getCalendario') return [];
+  if (action==='saveUtente'||action==='saveOperatore'||action==='saveMansione') return 'ok';
+  if (action==='deleteUtente'||action==='deleteOperatore'||action==='deleteMansione') return true;
+  if (action==='generaCalendario') return [];
+  if (action==='registraSostituzione') return {ok:true,debito_id:'D'+Date.now()};
+  if (action==='saldaDebito') return true;
+  if (action==='initSheets') return 'ok';
+  if (action==='getTurniOperatori') return [];
+  if (action==='getRuoli') return [
+    {id:'R01',nome:'Responsabile',compiti_fissi:'CT07,CT02',note:'Coordina tutta la struttura'},
+    {id:'R02',nome:'Educatore',compiti_fissi:'CT01,CT05,CT08',note:'Colloqui e attività terapeutiche'},
+    {id:'R03',nome:'Infermiere',compiti_fissi:'CT04,CT08',note:'Cura e monitoraggio sanitario'},
+    {id:'R04',nome:'Operatore Socio-Sanitario',compiti_fissi:'CT02,CT08',note:'Assistenza quotidiana'},
+    {id:'R05',nome:'Cuoco',compiti_fissi:'CT06',note:'Gestione cucina e pasti'},
+  ];
+  if (action==='getPresenzeFisse') return [
+    {id:'PF1',operatore_id:'OP1',lun:true,mar:true,mer:true,gio:true,ven:true,sab:false,dom:false,turno_default:'Mattina'},
+    {id:'PF2',operatore_id:'OP2',lun:true,mar:false,mer:true,gio:false,ven:true,sab:false,dom:false,turno_default:'Pomeriggio'},
+    {id:'PF3',operatore_id:'OP3',lun:false,mar:true,mer:false,gio:true,ven:false,sab:true,dom:false,turno_default:'Mattina'},
+  ];
+  if (action==='saveRuolo'||action==='deleteRuolo') return 'ok';
+  if (action==='savePresenzaFissa'||action==='deletePresenzaFissa') return 'ok';
+  if (action==='getCompitiOperatori') return [];
+  if (action==='getCompitiTipi') return [
+    {id:'CT01',nome:'Colloquio individuale',categoria:'Clinico',durata_ore:1},
+    {id:'CT02',nome:'Supervisione utenti',categoria:'Supervisione',durata_ore:2},
+    {id:'CT03',nome:'Burocrazia / Pratiche',categoria:'Amministrativo',durata_ore:1},
+    {id:'CT04',nome:'Chiamate familiari',categoria:'Relazionale',durata_ore:1},
+    {id:'CT05',nome:'Attività terapeutica',categoria:'Clinico',durata_ore:1},
+    {id:'CT06',nome:'Pulizia ufficio',categoria:'Struttura',durata_ore:0.5},
+    {id:'CT07',nome:'Riunione équipe',categoria:'Organizzativo',durata_ore:1.5},
+    {id:'CT08',nome:'Diario di bordo',categoria:'Amministrativo',durata_ore:0.5},
+    {id:'CT09',nome:'Turno notturno',categoria:'Turno',durata_ore:8},
+    {id:'CT10',nome:'Reperibilità',categoria:'Turno',durata_ore:4},
+  ];
+  if (action==='saveTurnoOperatore'||action==='saveCompitoOperatore'||action==='saveCompitoTipo') return 'ok';
+  if (action==='deleteTurnoOperatore'||action==='deleteCompitoOperatore'||action==='deleteCompitoTipo') return true;
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════════════════════
+window.addEventListener('load', function() {
+  loadAll().then(function() { showPage('dashboard'); });
+});
+
+function loadAll() {
+  showLoader(true);
+  return Promise.all([
+    callApi('getUtenti').then(function(d){ S.utenti = d||[]; }),
+    callApi('getOperatori').then(function(d){ S.operatori = d||[]; }),
+    callApi('getMansioni').then(function(d){ S.mansioni = d||[]; }),
+    callApi('getDebiti').then(function(d){ S.debiti = d||[]; }),
+    callApi('getTurniOperatori').then(function(d){ S.turniOperatori = d||[]; }),
+    callApi('getCompitiOperatori').then(function(d){ S.compitiOperatori = d||[]; }),
+    callApi('getCompitiTipi').then(function(d){ S.compitiTipi = d||[]; }),
+    callApi('getRuoli').then(function(d){ S.ruoli = d||[]; }),
+    callApi('getPresenzeFisse').then(function(d){ S.presenzeFisse = d||[]; }),
+  ]).catch(function(e){ toast('Errore caricamento: '+e.message,'error'); })
+    .finally(function(){ showLoader(false); });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════════════════════
+function showPage(page) {
+  S.currentPage = page;
+  // Sidebar nav
+  document.querySelectorAll('.nav-item').forEach(function(el){ el.classList.remove('active'); });
+  var navEl = document.getElementById('nav-'+page);
+  if (navEl) navEl.classList.add('active');
+  // Bottom nav
+  document.querySelectorAll('.bnav-item').forEach(function(el){ el.classList.remove('active'); });
+  var bnavEl = document.getElementById('bnav-'+page);
+  if (bnavEl) bnavEl.classList.add('active');
+  // Close sidebar on mobile when navigating
+  if (window.innerWidth <= 768) closeSidebar();
+  
+  var titles = {
+    dashboard:'Dashboard', utenti:'Gestione Utenti', operatori:'Gestione Operatori',
+    mansioni:'Gestione Mansioni', calendario:'Calendario Utenti',
+    turni:'Turni Operatori', compiti:'Compiti Operatori',
+    ruoli:'Ruoli & Competenze', presenze:'Presenze Fisse',
+    sostituzioni:'Sostituzioni', debiti:'Debiti & Crediti', report:'Stampa Report'
+  };
+  document.getElementById('pageTitle').textContent = titles[page]||page;
+  document.getElementById('topbarActions').innerHTML = '';
+  
+  var pages = {
+    dashboard: renderDashboard, utenti: renderUtenti, operatori: renderOperatori,
+    mansioni: renderMansioni, calendario: renderCalendario,
+    turni: renderTurniOperatori, compiti: renderCompitiOperatori,
+    ruoli: renderRuoli, presenze: renderPresenzeFisse,
+    sostituzioni: renderSostituzioni, debiti: renderDebiti, report: renderReport
+  };
+  if (pages[page]) pages[page]();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════════════════════════════
+function renderDashboard() {
+  var debitiAperti = S.debiti.filter(function(d){ return d.stato==='aperto'; }).length;
+  document.getElementById('pageContent').innerHTML =
+    '<div class="stats-row">' +
+    statCard('👤','Utenti Attivi',S.utenti.length,'#EEF4FB') +
+    statCard('🧑‍⚕️','Operatori',S.operatori.length,'#E2F4E2') +
+    statCard('🔧','Mansioni',S.mansioni.length,'#FFF8E7') +
+    statCard('⚖️','Debiti Aperti',debitiAperti,'#FEE2E2') +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">' +
+    renderFasceChart() +
+    renderDebitiSummary() +
+    '</div>' +
+    '<div class="card" style="margin-top:20px">' +
+    '<div class="card-header"><span class="card-title">⚡ Azioni Rapide</span></div>' +
+    '<div class="card-body" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px">' +
+    '<button class="btn btn-primary" onclick="showPage(\'calendario\')">📅 Vai al Calendario</button>' +
+    '<button class="btn btn-amber" onclick="showPage(\'sostituzioni\')">🔄 Registra Sostituzione</button>' +
+    '<button class="btn btn-success" onclick="showGeneraModal()">✨ Genera Calendario Mensile</button>' +
+    '<button class="btn btn-ghost" onclick="showPage(\'report\')">🖨️ Stampa Report</button>' +
+    (isAppsScript ? '<button class="btn btn-ghost" onclick="initSheets()">🔧 Inizializza DB</button>' : '') +
+    '</div></div>';
+}
+
+function statCard(icon, label, value, bg) {
+  return '<div class="stat-card"><div class="stat-icon" style="background:'+bg+'">'+icon+'</div>' +
+    '<div><div class="stat-num">'+value+'</div><div class="stat-lbl">'+label+'</div></div></div>';
+}
+
+function renderFasceChart() {
+  var f1 = S.utenti.filter(function(u){ return u.fascia==='F1'; }).length;
+  var f2 = S.utenti.filter(function(u){ return u.fascia==='F2'; }).length;
+  var f3 = S.utenti.filter(function(u){ return u.fascia==='F3'; }).length;
+  var tot = S.utenti.length || 1;
+  return '<div class="card"><div class="card-header"><span class="card-title">📊 Distribuzione Fasce</span></div>' +
+    '<div class="card-body">' +
+    fasceBar('F1 ★','F1',f1,tot,'#FEF3C7','#92400E') +
+    fasceBar('F2 ★★★','F2',f2,tot,'#DBEAFE','#1E40AF') +
+    fasceBar('F3 ★★★★★','F3',f3,tot,'#D1FAE5','#065F46') +
+    '</div></div>';
+}
+
+function fasceBar(label,cls,n,tot,bg,fg) {
+  var pct = Math.round(n/tot*100);
+  return '<div style="margin-bottom:14px">' +
+    '<div style="display:flex;justify-content:space-between;margin-bottom:5px">' +
+    '<span class="badge badge-'+cls.toLowerCase()+'">'+label+'</span>' +
+    '<span style="font-weight:600;color:var(--navy)">'+n+' utenti</span></div>' +
+    '<div style="background:var(--gray2);border-radius:20px;height:8px">' +
+    '<div style="background:'+fg+';width:'+pct+'%;height:8px;border-radius:20px;transition:width .6s"></div>' +
+    '</div></div>';
+}
+
+function renderDebitiSummary() {
+  var aperti = S.debiti.filter(function(d){ return d.stato==='aperto'; });
+  var html = '<div class="card"><div class="card-header">' +
+    '<span class="card-title">⚖️ Debiti Aperti</span>' +
+    '<button class="btn btn-sm btn-ghost" onclick="showPage(\'debiti\')">Vedi tutti</button>' +
+    '</div><div class="card-body">';
+  if (aperti.length === 0) {
+    html += '<p style="color:var(--gray3);font-size:.88rem;text-align:center;padding:20px">✅ Nessun debito aperto</p>';
+  } else {
+    aperti.slice(0,4).forEach(function(d) {
+      html += '<div class="debt-card open">' +
+        '<div class="debt-info"><div class="debt-title">'+d.debitore_nome+' → '+d.creditore_nome+'</div>' +
+        '<div class="debt-sub">Mansione: '+d.mansione_ref+' • '+d.data_creazione+'</div></div>' +
+        '<span class="badge badge-open">Aperto</span></div>';
+    });
+  }
+  return html + '</div></div>';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  UTENTI
+// ═══════════════════════════════════════════════════════════════════
+function renderUtenti() {
+  document.getElementById('topbarActions').innerHTML =
+    '<button class="btn btn-primary" onclick="openUtenteForm()">+ Nuovo Utente</button>';
+  
+  var html = '<div class="card"><div class="card-header">' +
+    '<span class="card-title">Utenti ('+S.utenti.length+')</span>' +
+    '<input class="form-control" style="width:220px" placeholder="🔍 Cerca..." oninput="filterTable(this.value,\'utentiTable\')">' +
+    '</div><div class="table-wrap"><table id="utentiTable">' +
+    '<thead><tr><th>Nome</th><th>Fascia</th><th>Note</th><th>Azioni</th></tr></thead><tbody>';
+  
+  S.utenti.forEach(function(u) {
+    var f = (u.fascia||'F1').toLowerCase();
+    html += '<tr>' +
+      '<td><b>'+u.nome+'</b></td>' +
+      '<td><span class="badge badge-'+f+'">'+fasciaLabel(u.fascia)+'</span></td>' +
+      '<td style="color:var(--gray3);font-size:.8rem">'+( u.note||'—')+'</td>' +
+      '<td><div class="actions">' +
+      '<button class="btn btn-sm btn-ghost" onclick="openUtenteForm(\''+u.id+'\')">✏️</button>' +
+      '<button class="btn btn-sm btn-danger" onclick="deleteItem(\'utenti\',\''+u.id+'\',\''+esc(u.nome)+'\')">🗑</button>' +
+      '</div></td></tr>';
+  });
+  
+  html += '</tbody></table></div></div>';
+  document.getElementById('pageContent').innerHTML = html;
+}
+
+function fasciaLabel(f) {
+  if (f==='F3') return 'F3 ★★★★★';
+  if (f==='F2') return 'F2 ★★★';
+  return 'F1 ★';
+}
+
+function openUtenteForm(id) {
+  var u = id ? S.utenti.find(function(x){ return x.id===id; }) : {};
+  u = u || {};
+  openModal(id ? 'Modifica Utente' : 'Nuovo Utente',
+    '<div class="form-row">' +
+    field('id','Codice (es. U21)', u.id||'', !id) +
+    field('fascia','Fascia','',false,'select',[
+      {v:'F1',l:'F1 ★ — Base'},{v:'F2',l:'F2 ★★★ — Intermedio'},{v:'F3',l:'F3 ★★★★★ — Avanzato'}
+    ], u.fascia||'F1') +
+    '</div>' +
+    field('nome','Nome Completo', u.nome||'') +
+    field('data_ingresso','Data Ingresso', u.data_ingresso||'') +
+    field('note','Note', u.note||''),
+    [
+      {label:'Annulla',cls:'btn-ghost',action:'closeModal()'},
+      {label:'Salva',cls:'btn-primary',action:'saveUtente()'},
+    ]
+  );
+  if (id) { setVal('id',id); setVal('fascia',u.fascia||'F1'); }
+}
+
+function saveUtente() {
+  var obj = {
+    id: getVal('id'), nome: getVal('nome'),
+    fascia: getVal('fascia'), attivo: true,
+    data_ingresso: getVal('data_ingresso'), note: getVal('note')
+  };
+  if (!obj.nome) { toast('Nome obbligatorio','error'); return; }
+  showLoader(true);
+  callApi('saveUtente', obj).then(function() {
+    return callApi('getUtenti').then(function(d){ S.utenti = d||[]; });
+  }).then(function() {
+    closeModal(); renderUtenti(); toast('Utente salvato ✓','success');
+  }).catch(function(e){ toast('Errore: '+e.message,'error'); })
+    .finally(function(){ showLoader(false); });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  OPERATORI
+// ═══════════════════════════════════════════════════════════════════
+function renderOperatori() {
+  document.getElementById('topbarActions').innerHTML =
+    '<button class="btn btn-primary" onclick="openOperatoreForm()">+ Nuovo Operatore</button>';
+  
+  var html = '<div class="card"><div class="card-header">' +
+    '<span class="card-title">Operatori ('+S.operatori.length+')</span></div>' +
+    '<div class="table-wrap"><table>' +
+    '<thead><tr><th>Nome</th><th>Ruolo</th><th>Azioni</th></tr></thead><tbody>';
+  
+  S.operatori.forEach(function(o) {
+    html += '<tr>' +
+      '<td><b>'+o.nome+'</b></td><td>'+( o.ruolo||'—')+'</td>' +
+      '<td><div class="actions">' +
+      '<button class="btn btn-sm btn-ghost" onclick="openOperatoreForm(\''+o.id+'\')">✏️</button>' +
+      '<button class="btn btn-sm btn-danger" onclick="deleteItem(\'operatori\',\''+o.id+'\',\''+esc(o.nome)+'\')">🗑</button>' +
+      '</div></td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+  document.getElementById('pageContent').innerHTML = html;
+}
+
+function openOperatoreForm(id) {
+  var o = id ? S.operatori.find(function(x){ return x.id===id; }) : {};
+  o = o||{};
+  openModal(id ? 'Modifica Operatore' : 'Nuovo Operatore',
+    field('id','ID (es. OP4)', o.id||'', !id) +
+    field('nome','Nome Completo', o.nome||'') +
+    field('ruolo','Ruolo', o.ruolo||'') +
+    field('note','Note', o.note||''),
+    [{label:'Annulla',cls:'btn-ghost',action:'closeModal()'},
+     {label:'Salva',cls:'btn-primary',action:'saveOperatore()'}]
+  );
+}
+
+function saveOperatore() {
+  var obj = { id: getVal('id'), nome: getVal('nome'), ruolo: getVal('ruolo'), attivo: true, note: getVal('note') };
+  if (!obj.nome) { toast('Nome obbligatorio','error'); return; }
+  showLoader(true);
+  callApi('saveOperatore', obj).then(function() {
+    return callApi('getOperatori').then(function(d){ S.operatori = d||[]; });
+  }).then(function() { closeModal(); renderOperatori(); toast('Operatore salvato ✓','success'); })
+    .catch(function(e){ toast('Errore: '+e.message,'error'); })
+    .finally(function(){ showLoader(false); });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  MANSIONI
+// ═══════════════════════════════════════════════════════════════════
+function renderMansioni() {
+  document.getElementById('topbarActions').innerHTML =
+    '<button class="btn btn-primary" onclick="openMansioneForm()">+ Nuova Mansione</button>';
+  
+  // Raggruppa per zona
+  var zone = {};
+  S.mansioni.forEach(function(m) {
+    if (!zone[m.zona]) zone[m.zona] = [];
+    zone[m.zona].push(m);
+  });
+  
+  var html = '';
+  Object.keys(zone).forEach(function(zona) {
+    html += '<div class="card"><div class="card-header">' +
+      '<span class="card-title">📍 '+zona+' ('+zone[zona].length+')</span></div>' +
+      '<div class="table-wrap"><table>' +
+      '<thead><tr><th>Descrizione</th><th>Fascia Min.</th><th>Note Speciali</th><th>Azioni</th></tr></thead><tbody>';
+    zone[zona].forEach(function(m) {
+      var f = (m.fascia_min||'F1').toLowerCase();
+      html += '<tr>' +
+        '<td>'+m.descrizione+'</td>' +
+        '<td><span class="badge badge-'+f+'">'+fasciaLabel(m.fascia_min)+'</span></td>' +
+        '<td style="color:var(--gray3);font-size:.8rem">'+(m.note_speciali||'—')+'</td>' +
+        '<td><div class="actions">' +
+        '<button class="btn btn-sm btn-ghost" onclick="openMansioneForm(\''+m.id+'\')">✏️</button>' +
+        '<button class="btn btn-sm btn-danger" onclick="deleteItem(\'mansioni\',\''+m.id+'\',\''+esc(m.descrizione)+'\')">🗑</button>' +
+        '</div></td></tr>';
+    });
+    html += '</tbody></table></div></div>';
+  });
+  document.getElementById('pageContent').innerHTML = html;
+}
+
+function openMansioneForm(id) {
+  var m = id ? S.mansioni.find(function(x){ return x.id===id; }) : {};
+  m = m||{};
+  openModal(id ? 'Modifica Mansione' : 'Nuova Mansione',
+    '<div class="form-row">'+
+    field('id','ID (es. M21)', m.id||'', !id) +
+    field('fascia_min','Fascia Minima','',false,'select',[
+      {v:'F1',l:'F1 — Tutti'},{v:'F2',l:'F2 — Intermedio+'},{v:'F3',l:'F3 — Solo Avanzati'}
+    ], m.fascia_min||'F1') +
+    '</div>' +
+    field('zona','Zona/Area', m.zona||'') +
+    field('descrizione','Descrizione', m.descrizione||'') +
+    field('note_speciali','Note Speciali', m.note_speciali||''),
+    [{label:'Annulla',cls:'btn-ghost',action:'closeModal()'},
+     {label:'Salva',cls:'btn-primary',action:'saveMansione()'}]
+  );
+  if (id) setVal('fascia_min', m.fascia_min||'F1');
+}
+
+function saveMansione() {
+  var obj = { id: getVal('id'), zona: getVal('zona'), descrizione: getVal('descrizione'),
+    fascia_min: getVal('fascia_min'), note_speciali: getVal('note_speciali'), attivo: true };
+  if (!obj.descrizione) { toast('Descrizione obbligatoria','error'); return; }
+  showLoader(true);
+  callApi('saveMansione', obj).then(function() {
+    return callApi('getMansioni').then(function(d){ S.mansioni = d||[]; });
+  }).then(function() { closeModal(); renderMansioni(); toast('Mansione salvata ✓','success'); })
+    .catch(function(e){ toast('Errore: '+e.message,'error'); })
+    .finally(function(){ showLoader(false); });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  CALENDARIO
+// ═══════════════════════════════════════════════════════════════════
+function renderCalendario() {
+  document.getElementById('topbarActions').innerHTML =
+    '<button class="btn btn-success" onclick="showGeneraModal()"><span>✨</span><span class="btn-text-hide"> Genera Mensile</span></button>';
+  
+  var html = '';
+  
+  if (!S.settimane || S.settimane.length === 0) {
+    html = '<div class="card"><div class="card-body" style="text-align:center;padding:60px 20px">' +
+      '<div style="font-size:3rem;margin-bottom:12px">📅</div>' +
+      '<h3 style="color:var(--navy);margin-bottom:8px">Nessun Calendario Generato</h3>' +
+      '<p style="color:var(--gray3);margin-bottom:20px">Genera il calendario mensile per iniziare ad assegnare le mansioni.</p>' +
+      '<button class="btn btn-success btn-lg" onclick="showGeneraModal()">✨ Genera Calendario Mensile</button>' +
+      '</div></div>';
+  } else {
+    // Selettore settimana
+    html = '<div class="week-selector no-print">' +
+      '<span>Settimana:</span>';
+    S.settimane.forEach(function(s, i) {
+      html += '<div class="week-badge" style="cursor:pointer;'+(S.currentSettimana===s.id?'':'background:var(--gray2);color:var(--text)')+'" ' +
+        'onclick="selectSettimana(\''+s.id+'\')">' +
+        '<span>'+s.tipo+'</span><span>'+s.dal+' – '+s.al+'</span></div>';
+    });
+    html += '</div>';
+    
+    if (S.currentSettimana) {
+      html += renderCalGrid(S.currentSettimana);
+    }
+  }
+  
+  document.getElementById('pageContent').innerHTML = html;
+}
+
+function selectSettimana(id) {
+  S.currentSettimana = id;
+  showLoader(true);
+  callApi('getCalendario', { settimana_id: id }).then(function(d) {
+    S.calendario = d||[];
+    renderCalendario();
+  }).finally(function(){ showLoader(false); });
+}
+
+function renderCalGrid(settimanaId) {
+  var giorni = ['LUN','MAR','MER','GIO','VEN','SAB','DOM'];
+  var calRows = S.calendario.filter(function(r){ return r.settimana_id === settimanaId; });
+  
+  // Raggruppa per zona
+  var perZona = {};
+  calRows.forEach(function(r) {
+    if (!perZona[r.zona]) perZona[r.zona] = {};
+    perZona[r.zona][r.giorno] = r;
+  });
+  
+  if (calRows.length === 0) {
+    return '<div class="card"><div class="card-body" style="text-align:center;padding:40px;color:var(--gray3)">Nessuna assegnazione per questa settimana</div></div>';
+  }
+  
+  var html = '<div class="card" id="calCard">' +
+    '<div class="card-header"><span class="card-title">📅 Calendario Settimana '+settimanaId+'</span>' +
+    '<button class="btn btn-sm btn-ghost no-print" onclick="showPage(\'report\')">🖨️ Stampa</button></div>' +
+    '<div class="card-body" style="padding:0;overflow-x:auto">' +
+    '<div class="cal-grid">' +
+    '<div class="cal-cell cal-head">Mansione / Zona</div>';
+  
+  giorni.forEach(function(g) {
+    html += '<div class="cal-cell cal-head">'+g+'</div>';
+  });
+  
+  Object.keys(perZona).forEach(function(zona) {
+    html += '<div class="cal-cell cal-zone">'+zona+'</div>';
+    giorni.forEach(function(g) {
+      var row = perZona[zona][g];
+      if (row) {
+        var cls = row.sostituto_id ? 'cal-name substituted' : 'cal-name';
+        var nome = row.sostituto_nome || row.utente_nome || '—';
+        var title = row.sostituto_nome ? 'Sostituto: '+row.sostituto_nome+' ('+row.motivo_sost+')' : '';
+        html += '<div class="cal-cell"><div class="'+cls+'" title="'+title+'" ' +
+          'onclick="openSostituzione(\''+row.id+'\',\''+esc(row.utente_nome)+'\',\''+g+'\')">' +
+          '<span style="font-size:.75rem">'+nome+'</span></div></div>';
+      } else {
+        html += '<div class="cal-cell"></div>';
+      }
+    });
+  });
+  
+  html += '</div></div></div>';
+  return html;
+}
+
+function showGeneraModal() {
+  var now = new Date();
+  openModal('✨ Genera Calendario Mensile',
+    '<p style="color:var(--gray4);font-size:.88rem;margin-bottom:16px">Il sistema genererà le settimane del mese selezionato e assegnerà automaticamente le mansioni in base alla fascia degli utenti, seguendo la rotazione B→C→D→E.</p>' +
+    '<div class="form-row">' +
+    field('gen_anno','Anno', now.getFullYear()) +
+    field('gen_mese','Mese','',false,'select',
+      [{v:'1',l:'Gennaio'},{v:'2',l:'Febbraio'},{v:'3',l:'Marzo'},{v:'4',l:'Aprile'},
+       {v:'5',l:'Maggio'},{v:'6',l:'Giugno'},{v:'7',l:'Luglio'},{v:'8',l:'Agosto'},
+       {v:'9',l:'Settembre'},{v:'10',l:'Ottobre'},{v:'11',l:'Novembre'},{v:'12',l:'Dicembre'}],
+      now.getMonth()+1) +
+    '</div>',
+    [{label:'Annulla',cls:'btn-ghost',action:'closeModal()'},
+     {label:'Genera ✨',cls:'btn-success',action:'generaCalendario()'}]
+  );
+  setVal('gen_mese', now.getMonth()+1);
+}
+
+function generaCalendario() {
+  var anno = parseInt(getVal('gen_anno'));
+  var mese = parseInt(getVal('gen_mese'));
+  if (!anno || !mese) { toast('Inserisci anno e mese','error'); return; }
+  showLoader(true);
+  callApi('generaCalendario', { anno: anno, mese: mese, utenti: S.utenti }).then(function(d) {
+    // Build settimane list from result
+    var settimaneMap = {};
+    (d||[]).forEach(function(r) {
+      if (!settimaneMap[r.settimana_id]) {
+        settimaneMap[r.settimana_id] = { id: r.settimana_id, tipo: r.tipo, dal: r.dal, al: r.al };
+      }
+    });
+    S.settimane = Object.values(settimaneMap);
+    if (S.settimane.length > 0) S.currentSettimana = S.settimane[0].id;
+    S.calendario = d||[];
+    closeModal(); renderCalendario();
+    toast('Calendario generato: '+S.settimane.length+' settimane ✓','success');
+  }).catch(function(e){ toast('Errore: '+e.message,'error'); })
+    .finally(function(){ showLoader(false); });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  SOSTITUZIONI
+// ═══════════════════════════════════════════════════════════════════
+function openSostituzione(assId, utenteNome, giorno) {
+  var optsUtenti = S.utenti.map(function(u){ return {v:u.id, l:u.nome}; });
+  openModal('🔄 Registra Sostituzione',
+    '<p style="margin-bottom:16px;padding:10px 14px;background:#FEF3C7;border-radius:7px;font-size:.88rem">' +
+    '<b>'+utenteNome+'</b> — '+giorno+'<br><small style="color:var(--gray4)">ID Assegnazione: '+assId+'</small></p>' +
+    field('sost_ass_id','ID Assegnazione', assId, false) +
+    field('sost_motivo','Motivo Assenza','') +
+    '<div class="form-group"><label class="form-label">Sostituto</label>' +
+    selField('sost_id', optsUtenti, '') + '</div>',
+    [{label:'Annulla',cls:'btn-ghost',action:'closeModal()'},
+     {label:'Registra 🔄',cls:'btn-amber',action:'saveSOstituzione()'}]
+  );
+}
+
+function renderSostituzioni() {
+  var sostituzioni = S.calendario.filter(function(r){ return r.sostituto_id; });
+  var html = '<div class="card"><div class="card-header">' +
+    '<span class="card-title">🔄 Sostituzioni Registrate ('+sostituzioni.length+')</span></div>' +
+    '<div class="table-wrap"><table>' +
+    '<thead><tr><th>Settimana</th><th>Giorno</th><th>Mansione</th><th>Utente Assente</th><th>Sostituto</th><th>Motivo</th></tr></thead><tbody>';
+  
+  if (sostituzioni.length === 0) {
+    html += '<tr><td colspan="6" style="text-align:center;color:var(--gray3);padding:30px">Nessuna sostituzione registrata</td></tr>';
+  } else {
+    sostituzioni.forEach(function(r) {
+      html += '<tr><td>'+r.settimana_id+'</td><td><b>'+r.giorno+'</b></td>' +
+        '<td>'+r.zona+'</td>' +
+        '<td>'+r.utente_nome+'</td>' +
+        '<td style="color:var(--amber);font-weight:600">'+r.sostituto_nome+'</td>' +
+        '<td style="color:var(--gray4);font-size:.82rem">'+( r.motivo_sost||'—')+'</td></tr>';
+    });
+  }
+  html += '</tbody></table></div></div>';
+  
+  // Form nuova sostituzione manuale
+  html += '<div class="card"><div class="card-header"><span class="card-title">+ Nuova Sostituzione Manuale</span></div>' +
+    '<div class="card-body">' +
+    '<p style="color:var(--gray4);font-size:.88rem;margin-bottom:16px">Puoi anche registrare una sostituzione direttamente dal <b>Calendario</b> cliccando su una cella.</p>' +
+    '<div class="form-row">' +
+    buildSelect('man_ass','ID Assegnazione',S.calendario.map(function(r){ return {v:r.id,l:r.giorno+' '+r.utente_nome+' ('+r.zona+')'}; }),'') +
+    field('man_motivo','Motivo','') + '</div>' +
+    '<div class="form-group"><label class="form-label">Sostituto</label>' +
+    selField('man_sost', S.utenti.map(function(u){ return {v:u.id,l:u.nome}; }),'') + '</div>' +
+    '<button class="btn btn-amber" onclick="saveSostManuale()">🔄 Registra</button></div></div>';
+  
+  document.getElementById('pageContent').innerHTML = html;
+}
+
+function saveSOstituzione() {
+  var assId = getVal('sost_ass_id');
+  var sostId = getVal('sost_id');
+  var motivo = getVal('sost_motivo');
+  var sost = S.utenti.find(function(u){ return u.id===sostId; });
+  if (!sostId) { toast('Seleziona il sostituto','error'); return; }
+  showLoader(true);
+  callApi('registraSostituzione',{
+    assegnazione_id: assId, sostituto_id: sostId,
+    sostituto_nome: sost ? sost.nome : sostId, motivo: motivo
+  }).then(function(res) {
+    return callApi('getDebiti').then(function(d){ S.debiti = d||[]; }).then(function(){
+      return callApi('getCalendario',{ settimana_id: S.currentSettimana }).then(function(d){ S.calendario = d||[]; });
+    });
+  }).then(function() {
+    closeModal(); toast('Sostituzione registrata. Debito creato ✓','success');
+    if (S.currentPage === 'calendario') renderCalendario();
+  }).catch(function(e){ toast('Errore: '+e.message,'error'); })
+    .finally(function(){ showLoader(false); });
+}
+
+function saveSostManuale() {
+  var assId = getVal('man_ass');
+  var sostId = getVal('man_sost');
+  var motivo = getVal('man_motivo');
+  var sost = S.utenti.find(function(u){ return u.id===sostId; });
+  if (!assId || !sostId) { toast('Campi obbligatori mancanti','error'); return; }
+  showLoader(true);
+  callApi('registraSostituzione',{
+    assegnazione_id: assId, sostituto_id: sostId,
+    sostituto_nome: sost ? sost.nome : sostId, motivo: motivo
+  }).then(function() {
+    return Promise.all([
+      callApi('getDebiti').then(function(d){ S.debiti = d||[]; }),
+      callApi('getCalendario',{settimana_id:S.currentSettimana}).then(function(d){ S.calendario = d||[]; })
+    ]);
+  }).then(function(){ renderSostituzioni(); toast('Sostituzione registrata ✓','success'); })
+    .catch(function(e){ toast('Errore: '+e.message,'error'); })
+    .finally(function(){ showLoader(false); });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  DEBITI & CREDITI
+// ═══════════════════════════════════════════════════════════════════
+function renderDebiti() {
+  var aperti = S.debiti.filter(function(d){ return d.stato==='aperto'; });
+  var chiusi = S.debiti.filter(function(d){ return d.stato==='saldato'; });
+  
+  var html = '<div class="tabs">' +
+    '<div class="tab active" onclick="switchTab(this,\'tab-aperti\')">⚖️ Aperti ('+aperti.length+')</div>' +
+    '<div class="tab" onclick="switchTab(this,\'tab-chiusi\')">✅ Saldati ('+chiusi.length+')</div>' +
+    '</div>' +
+    '<div class="tab-panel active" id="tab-aperti">';
+  
+  if (aperti.length === 0) {
+    html += '<div style="text-align:center;padding:40px;color:var(--gray3)">✅ Nessun debito aperto — tutto in pari!</div>';
+  } else {
+    aperti.forEach(function(d) {
+      var mansione = S.mansioni.find(function(m){ return m.id===d.mansione_ref; });
+      html += '<div class="debt-card open">' +
+        '<div class="debt-info">' +
+        '<div class="debt-title">⚖️ <b>'+d.debitore_nome+'</b> deve a <b>'+d.creditore_nome+'</b></div>' +
+        '<div class="debt-sub">' +
+        'Mansione: '+(mansione ? mansione.descrizione : d.mansione_ref)+' &nbsp;|&nbsp; ' +
+        'Sett: '+d.settimana_ref+' &nbsp;|&nbsp; '+d.data_creazione+
+        (d.note ? ' &nbsp;|&nbsp; <i>'+d.note+'</i>' : '') +
+        '</div></div>' +
+        '<div style="display:flex;gap:8px;align-items:center">' +
+        '<span class="badge badge-open">Aperto</span>' +
+        '<button class="btn btn-sm btn-success" onclick="saldaDebito(\''+d.id+'\')">✅ Salda</button>' +
+        '</div></div>';
+    });
+  }
+  html += '</div><div class="tab-panel" id="tab-chiusi">';
+  chiusi.forEach(function(d) {
+    html += '<div class="debt-card closed">' +
+      '<div class="debt-info">' +
+      '<div class="debt-title">✅ <b>'+d.debitore_nome+'</b> → <b>'+d.creditore_nome+'</b></div>' +
+      '<div class="debt-sub">Saldato il '+( d.data_saldo||'—')+'</div>' +
+      '</div><span class="badge badge-closed">Saldato</span></div>';
+  });
+  html += '</div>';
+  document.getElementById('pageContent').innerHTML = html;
+}
+
+function saldaDebito(id) {
+  var note = prompt('Note per la chiusura del debito (opzionale):','');
+  showLoader(true);
+  callApi('saldaDebito',{ debito_id: id, note: note||'' }).then(function() {
+    return callApi('getDebiti').then(function(d){ S.debiti = d||[]; });
+  }).then(function(){ renderDebiti(); toast('Debito saldato ✓','success'); })
+    .catch(function(e){ toast('Errore: '+e.message,'error'); })
+    .finally(function(){ showLoader(false); });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  RUOLI & COMPETENZE
+// ═══════════════════════════════════════════════════════════════════
+function renderRuoli() {
+  document.getElementById('topbarActions').innerHTML =
+    '<button class="btn btn-primary" onclick="openRuoloForm()">+ Nuovo Ruolo</button>';
+
+  var html = '<div class="card"><div class="card-header"><span class="card-title">🎖️ Ruoli definiti ('+S.ruoli.length+')</span></div>' +
+    '<div class="card-body" style="margin-bottom:0;padding-bottom:0">' +
+    '<p style="color:var(--gray4);font-size:.85rem;margin-bottom:16px">I <b>compiti fissi</b> vengono ereditati automaticamente ad ogni nuova settimana generata. ' +
+    'I <b>compiti a rotazione</b> si assegnano manualmente dal modulo Compiti Operatori.</p>' +
+    '</div>' +
+    '<div class="table-wrap"><table>' +
+    '<thead><tr><th>Ruolo</th><th>Operatori assegnati</th><th>Compiti Fissi</th><th>Note</th><th>Azioni</th></tr></thead><tbody>';
+
+  S.ruoli.forEach(function(r) {
+    var opAssegnati = S.operatori.filter(function(o){ return o.ruolo === r.nome; });
+    var fissiIds = r.compiti_fissi ? r.compiti_fissi.split(',') : [];
+    var fissiNomi = fissiIds.map(function(id) {
+      var t = S.compitiTipi.find(function(x){ return x.id.trim()===id.trim(); });
+      return t ? t.nome : id;
+    });
+    html += '<tr>' +
+      '<td><b style="color:var(--navy)">'+r.nome+'</b></td>' +
+      '<td>' + (opAssegnati.length > 0
+        ? opAssegnati.map(function(o){ return '<span style="display:inline-block;background:#EEF4FB;border-radius:4px;padding:1px 7px;font-size:.78rem;margin:1px">'+o.nome+'</span>'; }).join('')
+        : '<span style="color:var(--gray3)">—</span>') +
+      '</td>' +
+      '<td>' + (fissiNomi.length > 0
+        ? fissiNomi.map(function(n){
+            var t = S.compitiTipi.find(function(x){ return x.nome===n; });
+            var c = t ? catCol(t.categoria) : {bg:'#eee',fg:'#333'};
+            return '<span style="display:inline-block;background:'+c.bg+';color:'+c.fg+';border-radius:10px;padding:2px 8px;font-size:.75rem;font-weight:600;margin:1px">'+n+'</span>';
+          }).join('')
+        : '<span style="color:var(--gray3);font-size:.82rem">Nessun compito fisso</span>') +
+      '</td>' +
+      '<td style="color:var(--gray4);font-size:.82rem">'+(r.note||'—')+'</td>' +
+      '<td><div class="actions">' +
+      '<button class="btn btn-sm btn-ghost" onclick="openRuoloForm(\''+r.id+'\')">✏️</button>' +
+      '<button class="btn btn-sm btn-danger" onclick="deleteRuolo(\''+r.id+'\',\''+r.nome.replace(/'/g,'').replace(/"/g,'')+'\')">🗑</button>' +
+      '</div></td></tr>';
+  });
+
+  html += '</tbody></table></div></div>';
+
+  // Info card: logica compiti fissi vs rotazione
+  html += '<div class="card" style="border-left:4px solid var(--sky)">' +
+    '<div class="card-body">' +
+    '<h3 style="color:var(--navy);font-size:.95rem;margin-bottom:10px">📌 Come funziona la logica Fisso / Rotazione</h3>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">' +
+    '<div style="background:#EEF4FB;border-radius:8px;padding:14px">' +
+    '<b style="color:var(--blue)">🔒 Compiti Fissi</b>' +
+    '<p style="font-size:.83rem;margin-top:6px;color:var(--gray4)">Associati al <b>ruolo</b>. Ogni volta che generi una nuova settimana, vengono assegnati automaticamente a tutti gli operatori con quel ruolo, per tutti i giorni in cui sono presenti.</p>' +
+    '</div>' +
+    '<div style="background:#E2F4E2;border-radius:8px;padding:14px">' +
+    '<b style="color:var(--green)">🔄 Compiti a Rotazione</b>' +
+    '<p style="font-size:.83rem;margin-top:6px;color:var(--gray4)">Assegnati <b>manualmente</b> settimana per settimana dal modulo Compiti Operatori. Permettono flessibilità in base alle esigenze della settimana.</p>' +
+    '</div></div></div></div>';
+
+  document.getElementById('pageContent').innerHTML = html;
+}
+
+function openRuoloForm(id) {
+  var r = id ? S.ruoli.find(function(x){ return x.id===id; }) : {};
+  r = r||{};
+  var fissiIds = r.compiti_fissi ? r.compiti_fissi.split(',').map(function(s){ return s.trim(); }) : [];
+
+  // Build checkboxes for compiti fissi
+  var checkboxHtml = '<div class="form-group"><label class="form-label">Compiti Fissi (ereditati automaticamente ogni settimana)</label>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;max-height:200px;overflow-y:auto;border:1px solid var(--gray2);border-radius:7px;padding:10px">';
+  S.compitiTipi.forEach(function(t) {
+    var checked = fissiIds.indexOf(t.id) >= 0;
+    var c = catCol(t.categoria);
+    checkboxHtml += '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;padding:4px;border-radius:5px" ' +
+      'onmouseover="this.style.background=\'var(--gray1)\'" onmouseout="this.style.background=\'\'">' +
+      '<input type="checkbox" id="cf_'+t.id+'" value="'+t.id+'"'+(checked?' checked':'')+' style="accent-color:var(--blue)">' +
+      '<span style="font-size:.82rem">'+t.nome+'</span>' +
+      '<span style="padding:1px 6px;border-radius:8px;font-size:.7rem;background:'+c.bg+';color:'+c.fg+';margin-left:auto">'+t.categoria+'</span>' +
+      '</label>';
+  });
+  checkboxHtml += '</div></div>';
+
+  openModal(id ? 'Modifica Ruolo' : 'Nuovo Ruolo',
+    '<div class="form-row">' +
+    field('r_id','ID (es. R06)', r.id||'', !!id) +
+    field('r_nome','Nome Ruolo', r.nome||'') +
+    '</div>' +
+    checkboxHtml +
+    field('r_note','Note', r.note||''),
+    [{label:'Annulla',cls:'btn-ghost',action:'closeModal()'},
+     {label:'Salva Ruolo',cls:'btn-primary',action:'saveRuolo()'}]
+  );
+}
+
+function saveRuolo() {
+  var id = getVal('r_id');
+  var nome = getVal('r_nome');
+  if (!nome) { toast('Nome ruolo obbligatorio','error'); return; }
+  // Raccoglie checkbox selezionate
+  var fissi = S.compitiTipi
+    .filter(function(t){ var el=document.getElementById('cf_'+t.id); return el&&el.checked; })
+    .map(function(t){ return t.id; }).join(',');
+  var obj = {id: id||'R'+Date.now(), nome: nome, compiti_fissi: fissi, note: getVal('r_note')};
+  showLoader(true);
+  callApi('saveRuolo', obj).then(function(){
+    var ex = S.ruoli.find(function(r){ return r.id===obj.id; });
+    if (ex) Object.assign(ex, obj); else S.ruoli.push(obj);
+    closeModal(); renderRuoli(); toast('Ruolo salvato ✓','success');
+  }).catch(function(e){ toast('Errore: '+e.message,'error'); })
+    .finally(function(){ showLoader(false); });
+}
+
+function deleteRuolo(id, nome) {
+  if (!confirm('Eliminare il ruolo "'+nome+'"?')) return;
+  showLoader(true);
+  callApi('deleteRuolo',{id:id}).then(function(){
+    S.ruoli = S.ruoli.filter(function(r){ return r.id!==id; });
+    renderRuoli(); toast('Eliminato ✓','success');
+  }).finally(function(){ showLoader(false); });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  PRESENZE FISSE
+// ═══════════════════════════════════════════════════════════════════
+var GIORNI_FULL = ['lun','mar','mer','gio','ven','sab','dom'];
+var GIORNI_LABEL = ['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
+
+function renderPresenzeFisse() {
+  document.getElementById('topbarActions').innerHTML =
+    '<button class="btn btn-primary" onclick="openPresenzaForm()">+ Configura Operatore</button>';
+
+  var html = '<div class="card"><div class="card-header">' +
+    '<span class="card-title">📆 Presenze Fisse Operatori</span></div>' +
+    '<div class="card-body" style="padding-bottom:6px">' +
+    '<p style="color:var(--gray4);font-size:.85rem">Configura i giorni fissi di presenza di ogni operatore e il loro turno di default. ' +
+    'Questi dati vengono usati per generare automaticamente i turni e per sapere in quali giorni assegnare i compiti fissi del ruolo.</p>' +
+    '</div>' +
+    '<div class="table-wrap"><table style="font-size:.83rem">' +
+    '<thead><tr><th>Operatore</th><th>Ruolo</th>';
+  GIORNI_LABEL.forEach(function(g){ html += '<th style="text-align:center">'+g.substring(0,3)+'</th>'; });
+  html += '<th>Turno Default</th><th>Azioni</th></tr></thead><tbody>';
+
+  S.operatori.forEach(function(op) {
+    var pf = S.presenzeFisse.find(function(p){ return p.operatore_id===op.id; });
+    html += '<tr><td><b>'+op.nome+'</b></td><td><small style="color:var(--gray3)">'+( op.ruolo||'—')+'</small></td>';
+    GIORNI_FULL.forEach(function(g) {
+      var presente = pf && (pf[g]===true||pf[g]==='TRUE'||pf[g]==='true'||pf[g]===1);
+      html += '<td style="text-align:center">' +
+        '<span style="font-size:1.1rem" title="'+(presente?'Presente':'Assente')+'">'+
+        (presente ? '✅' : '⬜') +
+        '</span></td>';
+    });
+    var turno = pf ? (pf.turno_default||'—') : '—';
+    var tc = turnoColor(turno);
+    html += '<td style="text-align:center"><span style="padding:2px 9px;border-radius:10px;font-size:.75rem;font-weight:600;background:'+tc.bg+';color:'+tc.fg+'">'+turno+'</span></td>';
+    html += '<td><button class="btn btn-sm btn-ghost" onclick="openPresenzaForm(\''+op.id+'\')">✏️ Configura</button></td></tr>';
+  });
+
+  html += '</tbody></table></div></div>';
+
+  // Riepilogo ore settimanali stimate
+  html += '<div class="card"><div class="card-header"><span class="card-title">📊 Ore Settimanali Stimate</span></div>' +
+    '<div class="card-body" style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">';
+  S.operatori.forEach(function(op) {
+    var pf = S.presenzeFisse.find(function(p){ return p.operatore_id===op.id; });
+    var gg = pf ? GIORNI_FULL.filter(function(g){ return pf[g]===true||pf[g]==='TRUE'||pf[g]==='true'||pf[g]===1; }).length : 0;
+    var turno = pf ? (pf.turno_default||'Mattina') : 'Mattina';
+    var oreGiorno = turno==='Notte'?8:turno==='Reperibilità'?4:8;
+    var oreTot = gg * oreGiorno;
+    html += '<div style="border:1px solid var(--gray2);border-radius:8px;padding:12px">' +
+      '<div style="font-weight:600;font-size:.88rem">'+op.nome+'</div>' +
+      '<div style="color:var(--gray3);font-size:.78rem">'+( op.ruolo||'—')+'</div>' +
+      '<div style="margin-top:6px;font-size:1.1rem;font-weight:700;color:var(--navy)">'+oreTot+' ore</div>' +
+      '<div style="color:var(--gray3);font-size:.75rem">'+gg+' giorni / settimana</div>' +
+      '</div>';
+  });
+  html += '</div></div>';
+
+  document.getElementById('pageContent').innerHTML = html;
+}
+
+function openPresenzaForm(opId) {
+  var op = opId ? S.operatori.find(function(o){ return o.id===opId; }) : null;
+  var pf = opId ? S.presenzeFisse.find(function(p){ return p.operatore_id===opId; }) : null;
+  var opOpts = S.operatori.map(function(o){ return {v:o.id,l:o.nome+' ('+( o.ruolo||'—')+')'}; });
+  var turnoOpts = TURNI_TIPI.map(function(t){ return {v:t,l:t}; });
+
+  var giorniHtml = '<div class="form-group"><label class="form-label">Giorni di Presenza Fissi</label>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;padding:10px;border:1px solid var(--gray2);border-radius:7px">';
+  GIORNI_FULL.forEach(function(g, i) {
+    var checked = pf && (pf[g]===true||pf[g]==='TRUE'||pf[g]==='true'||pf[g]===1);
+    giorniHtml += '<label style="display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;' +
+      'padding:8px 12px;border-radius:7px;border:2px solid var(--gray2);transition:all .15s" ' +
+      'onmouseover="this.style.borderColor=\'var(--sky)\'" onmouseout="if(!document.getElementById(\'pf_'+g+'\').checked)this.style.borderColor=\'var(--gray2)\'">' +
+      '<input type="checkbox" id="pf_'+g+'" value="'+g+'"'+(checked?' checked':'')+' style="accent-color:var(--blue)" ' +
+      'onchange="this.closest(\'label\').style.borderColor=this.checked?\'var(--blue)\':(\'var(--gray2)\')">' +
+      '<span style="font-size:.82rem;font-weight:600">'+GIORNI_LABEL[i].substring(0,3)+'</span>' +
+      '</label>';
+  });
+  giorniHtml += '</div></div>';
+
+  openModal((op ? 'Presenze di '+op.nome : 'Configura Presenze'),
+    (!opId ? field('pf_op','Operatore','',false,'select',opOpts,'') : '<input type="hidden" id="pf_op" value="'+opId+'">') +
+    giorniHtml +
+    field('pf_turno','Turno di Default (usato per la generazione automatica)','',false,'select',turnoOpts, pf?pf.turno_default:'Mattina') +
+    field('pf_note','Note', pf?pf.note||'':''),
+    [{label:'Annulla',cls:'btn-ghost',action:'closeModal()'},
+     {label:'Salva Presenze',cls:'btn-primary',action:'savePresenzaFissa()'}]
+  );
+  if (pf) setVal('pf_turno', pf.turno_default||'Mattina');
+}
+
+function savePresenzaFissa() {
+  var opId = getVal('pf_op');
+  if (!opId) { toast('Seleziona un operatore','error'); return; }
+  var pf = S.presenzeFisse.find(function(p){ return p.operatore_id===opId; });
+  var obj = {
+    id: pf ? pf.id : 'PF'+Date.now(),
+    operatore_id: opId,
+    turno_default: getVal('pf_turno'),
+    note: getVal('pf_note')
+  };
+  GIORNI_FULL.forEach(function(g) {
+    var el = document.getElementById('pf_'+g);
+    obj[g] = el ? el.checked : false;
+  });
+  showLoader(true);
+  callApi('savePresenzaFissa', obj).then(function(){
+    if (pf) Object.assign(pf, obj); else S.presenzeFisse.push(obj);
+    closeModal(); renderPresenzeFisse(); toast('Presenze salvate ✓','success');
+  }).catch(function(e){ toast('Errore: '+e.message,'error'); })
+    .finally(function(){ showLoader(false); });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  TURNI OPERATORI
+// ═══════════════════════════════════════════════════════════════════
+var TURNI_TIPI = ['Mattina','Pomeriggio','Notte','Reperibilità','Riposo','Libero'];
+var GIORNI = ['LUN','MAR','MER','GIO','VEN','SAB','DOM'];
+
+function renderTurniOperatori() {
+  document.getElementById('topbarActions').innerHTML =
+    '<button class="btn btn-success" onclick="showGeneraTurniModal()">✨ Genera Turni Mensili</button>' +
+    '<button class="btn btn-primary" onclick="openTurnoForm()">+ Aggiungi Turno</button>';
+
+  var sett = S.settimane.find(function(s){ return s.id===S.currentSettimana; }) || {};
+
+  var html = '';
+
+  // Selettore settimana
+  if (S.settimane.length > 0) {
+    html += '<div class="week-selector no-print" style="margin-bottom:20px">' +
+      '<span style="font-weight:600;color:var(--navy)">Settimana:</span>';
+    S.settimane.forEach(function(s) {
+      var active = S.currentSettimana === s.id;
+      html += '<div class="week-badge" style="cursor:pointer;' +
+        (active ? '' : 'background:var(--gray2);color:var(--text)') + '" ' +
+        'onclick="selectSettimana(\'' + s.id + '\');renderTurniOperatori()">' +
+        '<b>'+s.tipo+'</b>&nbsp;'+s.dal+' – '+s.al+'</div>';
+    });
+    html += '</div>';
+  }
+
+  // Griglia turni
+  html += '<div class="card"><div class="card-header">' +
+    '<span class="card-title">🗓️ Turni Settimana '+(sett.tipo||'—')+'</span>' +
+    '<button class="btn btn-sm btn-ghost no-print" onclick="printTurniOperatori()">🖨️ Stampa</button>' +
+    '</div><div style="overflow-x:auto"><table style="font-size:.82rem">' +
+    '<thead><tr><th style="min-width:140px">Operatore</th>';
+  GIORNI.forEach(function(g){ html += '<th style="text-align:center;min-width:90px">'+g+'</th>'; });
+  html += '<th>Azioni</th></tr></thead><tbody>';
+
+  S.operatori.forEach(function(op) {
+    html += '<tr><td><b>'+op.nome+'</b><br><small style="color:var(--gray3)">'+( op.ruolo||'')+'</small></td>';
+    GIORNI.forEach(function(g) {
+      var turno = S.turniOperatori.find(function(t){
+        return t.operatore_id===op.id && t.giorno===g && t.settimana_id===S.currentSettimana;
+      });
+      var val  = turno ? turno.turno : '—';
+      var col  = turnoColor(val);
+      html += '<td style="text-align:center">' +
+        '<span style="display:inline-block;padding:3px 8px;border-radius:12px;font-size:.75rem;font-weight:600;' +
+        'background:'+col.bg+';color:'+col.fg+';cursor:pointer" ' +
+        'onclick="quickTurno(\'' + op.id + '\',\'' + g + '\',\'' + val + '\')" title="Clicca per cambiare">' + val + '</span></td>';
+    });
+    html += '<td><button class="btn btn-sm btn-ghost" onclick="openTurnoForm(\\x27'+op.id+'\\x27)">✏️ Modifica settimana</button></td></tr>';
+  });
+
+  html += '</tbody></table></div></div>';
+
+  // Legenda colori
+  html += '<div class="card"><div class="card-header"><span class="card-title">Legenda Turni</span></div>' +
+    '<div class="card-body" style="display:flex;flex-wrap:wrap;gap:10px">';
+  TURNI_TIPI.forEach(function(t) {
+    var c = turnoColor(t);
+    html += '<span style="padding:4px 12px;border-radius:12px;font-size:.82rem;font-weight:600;background:'+c.bg+';color:'+c.fg+'">'+t+'</span>';
+  });
+  html += '</div></div>';
+
+  document.getElementById('pageContent').innerHTML = html;
+}
+
+function turnoColor(val) {
+  var map = {
+    'Mattina':      {bg:'#DBEAFE',fg:'#1E40AF'},
+    'Pomeriggio':   {bg:'#FEF3C7',fg:'#92400E'},
+    'Notte':        {bg:'#1A3A5C',fg:'#FFFFFF'},
+    'Reperibilità': {bg:'#F3E8FF',fg:'#6B21A8'},
+    'Riposo':       {bg:'#D1FAE5',fg:'#065F46'},
+    'Libero':       {bg:'#F3F4F6',fg:'#6B7280'},
+  };
+  return map[val] || {bg:'#F3F4F6',fg:'#6B7280'};
+}
+
+function quickTurno(opId, giorno, currentVal) {
+  var idx = TURNI_TIPI.indexOf(currentVal);
+  var nextVal = TURNI_TIPI[(idx + 1) % TURNI_TIPI.length];
+  var existing = S.turniOperatori.find(function(t){
+    return t.operatore_id===opId && t.giorno===giorno && t.settimana_id===S.currentSettimana;
+  });
+  var obj = existing ? Object.assign({}, existing, {turno: nextVal}) : {
+    id: 'T'+Date.now(), settimana_id: S.currentSettimana||'',
+    operatore_id: opId, giorno: giorno, turno: nextVal, note: ''
+  };
+  callApi('saveTurnoOperatore', obj).then(function() {
+    if (existing) existing.turno = nextVal;
+    else S.turniOperatori.push(obj);
+    renderTurniOperatori();
+  });
+}
+
+function openTurnoForm(opId) {
+  var op = opId ? S.operatori.find(function(o){ return o.id===opId; }) : null;
+  var settOpts = S.settimane.map(function(s){ return {v:s.id,l:s.tipo+' ('+s.dal+' – '+s.al+')'}; });
+  if (!settOpts.length) settOpts = [{v:'',l:'Nessuna settimana — genera prima il calendario'}];
+  var turnoOpts = TURNI_TIPI.map(function(t){ return {v:t,l:t}; });
+  var opOpts = S.operatori.map(function(o){ return {v:o.id,l:o.nome}; });
+
+  openModal((op?'Turni di '+op.nome:'Nuovo Turno'),
+    field('t_sett','Settimana','',false,'select',settOpts, S.currentSettimana||'') +
+    (!opId ? field('t_op','Operatore','',false,'select',opOpts,'') : '<input type="hidden" id="t_op" value="'+opId+'">') +
+    '<p style="font-weight:600;color:var(--navy);margin-bottom:8px">Turno per giorno:</p>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+    GIORNI.map(function(g){
+      var existing = S.turniOperatori.find(function(t){
+        return t.operatore_id===opId && t.giorno===g && t.settimana_id===S.currentSettimana;
+      });
+      return field('t_'+g, g, '', false, 'select', turnoOpts, existing ? existing.turno : 'Mattina');
+    }).join('') +
+    '</div>',
+    [{label:'Annulla',cls:'btn-ghost',action:'closeModal()'},
+     {label:'Salva Turni',cls:'btn-primary',action:'saveTurniSettimana()'}]
+  );
+}
+
+function saveTurniSettimana() {
+  var settId = getVal('t_sett');
+  var opId   = getVal('t_op');
+  if (!settId || !opId) { toast('Seleziona settimana e operatore','error'); return; }
+  var saves = GIORNI.map(function(g) {
+    var turno = getVal('t_'+g);
+    var existing = S.turniOperatori.find(function(t){
+      return t.operatore_id===opId && t.giorno===g && t.settimana_id===settId;
+    });
+    var obj = existing
+      ? Object.assign({}, existing, {turno: turno})
+      : {id:'T'+Date.now()+'_'+g, settimana_id:settId, operatore_id:opId, giorno:g, turno:turno, note:''};
+    return callApi('saveTurnoOperatore', obj).then(function(){
+      if (existing) existing.turno = turno;
+      else S.turniOperatori.push(obj);
+    });
+  });
+  showLoader(true);
+  Promise.all(saves).then(function(){
+    closeModal(); renderTurniOperatori(); toast('Turni salvati ✓','success');
+  }).finally(function(){ showLoader(false); });
+}
+
+function showGeneraTurniModal() {
+  var now = new Date();
+  var mesi = [{v:'1',l:'Gennaio'},{v:'2',l:'Febbraio'},{v:'3',l:'Marzo'},{v:'4',l:'Aprile'},
+    {v:'5',l:'Maggio'},{v:'6',l:'Giugno'},{v:'7',l:'Luglio'},{v:'8',l:'Agosto'},
+    {v:'9',l:'Settembre'},{v:'10',l:'Ottobre'},{v:'11',l:'Novembre'},{v:'12',l:'Dicembre'}];
+  openModal('✨ Genera Turni Mensili',
+    '<p style="color:var(--gray4);font-size:.88rem;margin-bottom:16px">Il sistema genererà automaticamente i turni per tutti gli operatori seguendo la rotazione: ogni operatore alterna Mattina → Pomeriggio → Notte ogni settimana.</p>' +
+    '<div class="form-row">' +
+    field('gt_anno','Anno',now.getFullYear()) +
+    field('gt_mese','Mese','',false,'select',mesi,now.getMonth()+1) +
+    '</div>' +
+    '<div class="form-group"><label class="form-label">Modello rotazione</label>' +
+    '<select id="gt_modello" class="form-control">' +
+    '<option value="rotazione">Rotazione automatica (M→P→N)</option>' +
+    '<option value="fisso_mattina">Tutti Mattina</option>' +
+    '<option value="fisso_pomeriggio">Tutti Pomeriggio</option>' +
+    '<option value="misto">Mattina nei festivi, Pomeriggio nei feriali</option>' +
+    '</select></div>',
+    [{label:'Annulla',cls:'btn-ghost',action:'closeModal()'},
+     {label:'Genera ✨',cls:'btn-success',action:'doGeneraTurni()'}]
+  );
+  setVal('gt_mese', now.getMonth()+1);
+}
+
+function doGeneraTurni() {
+  var modello = getVal('gt_modello');
+  var rotSeq = ['Mattina','Pomeriggio','Notte','Riposo'];
+  if (!S.settimane.length){ toast('Genera prima il calendario utenti','error'); return; }
+  closeModal(); showLoader(true);
+
+  var saves = [];
+  S.settimane.forEach(function(sett, si) {
+    S.operatori.forEach(function(op, oi) {
+      var pf = S.presenzeFisse.find(function(p){ return p.operatore_id===op.id; });
+      var giornoKeys = {LUN:'lun',MAR:'mar',MER:'mer',GIO:'gio',VEN:'ven',SAB:'sab',DOM:'dom'};
+      GIORNI.forEach(function(g, gi) {
+        // Se ha presenze fisse configurate e questo giorno non è presente → Riposo
+        var isPresente = true;
+        if (pf) {
+          var key = giornoKeys[g];
+          isPresente = (pf[key]===true||pf[key]==='TRUE'||pf[key]==='true'||pf[key]===1);
+        }
+        var turno;
+        if (!isPresente) {
+          turno = 'Riposo';
+        } else if (modello === 'rotazione') {
+          turno = rotSeq[(si + oi) % rotSeq.length];
+        } else if (modello === 'fisso_mattina') {
+          turno = 'Mattina';
+        } else if (modello === 'fisso_pomeriggio') {
+          turno = 'Pomeriggio';
+        } else {
+          turno = pf ? pf.turno_default||'Mattina' : (gi >= 5 ? 'Mattina' : 'Pomeriggio');
+        }
+        var obj = {id:'T'+sett.id+'_'+op.id+'_'+g, settimana_id:sett.id, operatore_id:op.id, giorno:g, turno:turno, note:''};
+        saves.push(callApi('saveTurnoOperatore', obj).then(function(){
+          var ex = S.turniOperatori.find(function(t){ return t.id===obj.id; });
+          if (ex) ex.turno = turno; else S.turniOperatori.push(obj);
+        }));
+      });
+    });
+  });
+
+  // Also seed compiti fissi per ruolo
+  S.settimane.forEach(function(sett) {
+    S.operatori.forEach(function(op) {
+      var pf = S.presenzeFisse.find(function(p){ return p.operatore_id===op.id; });
+      var giornoKeys = {LUN:'lun',MAR:'mar',MER:'mer',GIO:'gio',VEN:'ven',SAB:'sab',DOM:'dom'};
+      var ruolo = S.ruoli.find(function(r){ return r.nome===op.ruolo; });
+      if (!ruolo || !ruolo.compiti_fissi) return;
+      var fissiIds = ruolo.compiti_fissi.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+      GIORNI.forEach(function(g) {
+        if (pf) {
+          var key = giornoKeys[g];
+          var presente = (pf[key]===true||pf[key]==='TRUE'||pf[key]==='true'||pf[key]===1);
+          if (!presente) return;
+        }
+        fissiIds.forEach(function(tipoId) {
+          var obj = {id:'CF'+sett.id+'_'+op.id+'_'+g+'_'+tipoId,
+            settimana_id:sett.id, operatore_id:op.id, giorno:g, tipo_id:tipoId, note:'fisso'};
+          saves.push(callApi('saveCompitoOperatore', obj).then(function(){
+            var ex = S.compitiOperatori.find(function(c){ return c.id===obj.id; });
+            if (ex) Object.assign(ex,obj); else S.compitiOperatori.push(obj);
+          }));
+        });
+      });
+    });
+  });
+
+  Promise.all(saves).then(function(){
+    renderTurniOperatori(); toast('Turni generati per '+S.operatori.length+' operatori ✓','success');
+  }).finally(function(){ showLoader(false); });
+}
+
+function printTurniOperatori() {
+  var sett = S.settimane.find(function(s){ return s.id===S.currentSettimana; }) || {};
+  var css = '<style>@page{size:A4 landscape;margin:12mm}body{font-family:Arial,sans-serif;font-size:9pt}' +
+    'table{width:100%;border-collapse:collapse}' +
+    'th{background:#1A3A5C;color:white;padding:5pt;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    'td{border:1pt solid #ccc;padding:4pt;text-align:center}' +
+    '.m{background:#DBEAFE;color:#1E40AF;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    '.p{background:#FEF3C7;color:#92400E;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    '.n{background:#1A3A5C;color:white;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    '.r{background:#D1FAE5;color:#065F46;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    '</style>';
+  var html = css + '<h2 style="text-align:center;margin-bottom:4pt">Comunità La Forza — Turni Operatori</h2>' +
+    '<p style="text-align:center;margin-bottom:10pt">Settimana '+sett.tipo+' &nbsp;|&nbsp; '+sett.dal+' – '+sett.al+'</p>' +
+    '<table><thead><tr><th>Operatore</th>';
+  GIORNI.forEach(function(g){ html += '<th>'+g+'</th>'; });
+  html += '</tr></thead><tbody>';
+  S.operatori.forEach(function(op) {
+    html += '<tr><td style="text-align:left;font-weight:bold">'+op.nome+'</td>';
+    GIORNI.forEach(function(g) {
+      var t = S.turniOperatori.find(function(x){ return x.operatore_id===op.id&&x.giorno===g&&x.settimana_id===S.currentSettimana; });
+      var v = t?t.turno:'—';
+      var cls = v==='Mattina'?'m':v==='Pomeriggio'?'p':v==='Notte'?'n':v==='Riposo'?'r':'';
+      html += '<td class="'+cls+'"><b>'+v+'</b></td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  var w = window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><title>Turni Operatori</title></head><body>'+html+'</body></html>');
+  w.document.close(); w.focus();
+  setTimeout(function(){ w.print(); }, 600);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  COMPITI OPERATORI
+// ═══════════════════════════════════════════════════════════════════
+function renderCompitiOperatori() {
+  document.getElementById('topbarActions').innerHTML =
+    '<button class="btn btn-ghost" onclick="openCompitoTipoForm()">⚙️ Gestisci Tipi Compito</button>' +
+    '<button class="btn btn-primary" onclick="openCompitoForm()">+ Assegna Compito</button>';
+
+  var html = '<div class="tabs">' +
+    '<div class="tab active" onclick="switchTab(this,"tab-compiti-sett")">📋 Per Settimana</div>' +
+    '<div class="tab" onclick="switchTab(this,"tab-compiti-op")">👤 Per Operatore</div>' +
+    '<div class="tab" onclick="switchTab(this,"tab-tipi")">⚙️ Tipi di Compito</div>' +
+    '</div>';
+
+  // ── Tab: per settimana ──
+  html += '<div class="tab-panel active" id="tab-compiti-sett">';
+  if (!S.currentSettimana) {
+    html += '<div class="card"><div class="card-body" style="text-align:center;padding:40px;color:var(--gray3)">Genera prima un calendario per vedere i compiti.</div></div>';
+  } else {
+    var settCompiti = S.compitiOperatori.filter(function(c){ return c.settimana_id===S.currentSettimana; });
+
+    // Selezione settimana
+    html += '<div class="week-selector" style="margin-bottom:16px">';
+    S.settimane.forEach(function(s) {
+      var active = S.currentSettimana === s.id;
+      html += '<div class="week-badge" style="cursor:pointer;'+(active?'':'background:var(--gray2);color:var(--text)')+'" ' +
+        'onclick="selectSettimana(\'' + s.id + '\');renderCompitiOperatori()">' +
+        '<b>'+s.tipo+'</b>&nbsp;'+s.dal+'</div>';
+    });
+    html += '</div>';
+
+    // Griglia per operatore × giorno
+    html += '<div class="card"><div class="card-header">' +
+      '<span class="card-title">Compiti assegnati questa settimana</span>' +
+      '<button class="btn btn-sm btn-ghost no-print" onclick="printCompitiOperatori()">🖨️ Stampa</button>' +
+      '</div><div style="overflow-x:auto"><table style="font-size:.8rem">' +
+      '<thead><tr><th style="min-width:140px">Operatore</th>';
+    GIORNI.forEach(function(g){ html += '<th style="min-width:100px;text-align:center">'+g+'</th>'; });
+    html += '</tr></thead><tbody>';
+
+    S.operatori.forEach(function(op) {
+      html += '<tr><td><b>'+op.nome+'</b><br><small style="color:var(--gray3)">'+( op.ruolo||'')+'</small></td>';
+      GIORNI.forEach(function(g) {
+        var compiti = settCompiti.filter(function(c){ return c.operatore_id===op.id && c.giorno===g; });
+        html += '<td style="vertical-align:top;padding:4px">';
+        compiti.forEach(function(c) {
+          var tipo = S.compitiTipi.find(function(t){ return t.id===c.tipo_id; });
+          var catColor = catCol(tipo ? tipo.categoria : '');
+          html += '<div style="background:'+catColor.bg+';color:'+catColor.fg+';border-radius:5px;' +
+            'padding:2px 6px;margin-bottom:3px;font-size:.72rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between" ' +
+            'title="'+(tipo?tipo.descrizione||'':'')+'" onclick="openCompitoForm(\x22'+c.id+'\x22)">' +
+            '<span>'+(tipo?tipo.nome:c.tipo_id)+'</span>' +
+            '<span onclick="event.stopPropagation();deleteCompito(\x22'+c.id+'\x22)" style="margin-left:4px;opacity:.6;font-size:.7rem">✕</span>' +
+            '</div>';
+        });
+        html += '<div style="font-size:.7rem;color:var(--sky);cursor:pointer;text-align:center;padding:2px" ' +
+          'onclick="openCompitoForm(null,\x22'+op.id+'\x22,\x22'+g+'\x22)">+ aggiungi</div>';
+        html += '</td>';
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div></div>';
+  }
+  html += '</div>';
+
+  // ── Tab: per operatore ──
+  html += '<div class="tab-panel" id="tab-compiti-op">';
+  S.operatori.forEach(function(op) {
+    var opCompiti = S.compitiOperatori.filter(function(c){ return c.operatore_id===op.id; });
+    html += '<div class="card"><div class="card-header">' +
+      '<span class="card-title">'+op.nome+' <small style="font-weight:normal;color:var(--gray3)">'+( op.ruolo||'')+'</small></span>' +
+      '<span style="font-size:.82rem;color:var(--gray3)">'+opCompiti.length+' compiti assegnati</span>' +
+      '</div>';
+    if (opCompiti.length > 0) {
+      html += '<div class="table-wrap"><table><thead><tr><th>Settimana</th><th>Giorno</th><th>Compito</th><th>Categoria</th><th>Note</th><th></th></tr></thead><tbody>';
+      opCompiti.forEach(function(c) {
+        var tipo = S.compitiTipi.find(function(t){ return t.id===c.tipo_id; });
+        var catC = catCol(tipo ? tipo.categoria : '');
+        html += '<tr><td>'+c.settimana_id+'</td><td><b>'+c.giorno+'</b></td>' +
+          '<td>'+(tipo?tipo.nome:c.tipo_id)+'</td>' +
+          '<td><span style="padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:600;background:'+catC.bg+';color:'+catC.fg+'">'+(tipo?tipo.categoria:'—')+'</span></td>' +
+          '<td style="color:var(--gray3);font-size:.8rem">'+( c.note||'—')+'</td>' +
+          '<td><button class="btn btn-sm btn-danger" onclick="deleteCompito(\x22'+c.id+'\x22)">🗑</button></td></tr>';
+      });
+      html += '</tbody></table></div>';
+    } else {
+      html += '<div class="card-body" style="color:var(--gray3);font-size:.88rem">Nessun compito assegnato.</div>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+
+  // ── Tab: tipi compito ──
+  html += '<div class="tab-panel" id="tab-tipi">';
+  html += '<div class="card"><div class="card-header"><span class="card-title">⚙️ Tipi di Compito</span>' +
+    '<button class="btn btn-sm btn-primary" onclick="openCompitoTipoForm()">+ Nuovo Tipo</button></div>' +
+    '<div class="table-wrap"><table><thead><tr><th>Nome</th><th>Categoria</th><th>Durata (ore)</th><th>Azioni</th></tr></thead><tbody>';
+  S.compitiTipi.forEach(function(t) {
+    var c = catCol(t.categoria);
+    html += '<tr>' +
+      '<td><b>'+t.nome+'</b></td>' +
+      '<td><span style="padding:2px 8px;border-radius:12px;font-size:.75rem;font-weight:600;background:'+c.bg+';color:'+c.fg+'">'+t.categoria+'</span></td>' +
+      '<td>'+( t.durata_ore||'—')+'h</td>' +
+      '<td><div class="actions">' +
+      '<button class="btn btn-sm btn-ghost" onclick="openCompitoTipoForm(\x22'+t.id+'\x22)">✏️</button>' +
+      '<button class="btn btn-sm btn-danger" onclick="deleteCompitoTipo(\x22'+t.id+'\x22)">🗑</button>' +
+      '</div></td></tr>';
+  });
+  html += '</tbody></table></div></div>';
+  html += '</div>';
+
+  document.getElementById('pageContent').innerHTML = html;
+}
+
+function catCol(cat) {
+  var map = {
+    'Clinico':        {bg:'#DBEAFE',fg:'#1E40AF'},
+    'Supervisione':   {bg:'#D1FAE5',fg:'#065F46'},
+    'Amministrativo': {bg:'#FEF3C7',fg:'#92400E'},
+    'Relazionale':    {bg:'#FCE7F3',fg:'#9D174D'},
+    'Organizzativo':  {bg:'#EDE9FE',fg:'#5B21B6'},
+    'Struttura':      {bg:'#F3F4F6',fg:'#374151'},
+    'Turno':          {bg:'#1A3A5C',fg:'#FFFFFF'},
+  };
+  return map[cat] || {bg:'#F3F4F6',fg:'#374151'};
+}
+
+function openCompitoForm(id, preOpId, preGiorno) {
+  var c = id ? S.compitiOperatori.find(function(x){ return x.id===id; }) : {};
+  c = c || {};
+  var settOpts = S.settimane.map(function(s){ return {v:s.id,l:s.tipo+' ('+s.dal+' – '+s.al+')'}; });
+  if (!settOpts.length) settOpts = [{v:'',l:'Nessuna settimana disponibile'}];
+  var tipoOpts = S.compitiTipi.map(function(t){ return {v:t.id,l:t.nome+' ('+t.categoria+')'}; });
+  var opOpts   = S.operatori.map(function(o){ return {v:o.id,l:o.nome}; });
+  var gOpts    = GIORNI.map(function(g){ return {v:g,l:g}; });
+
+  openModal(id ? 'Modifica Compito' : 'Assegna Compito',
+    field('cp_sett','Settimana','',false,'select',settOpts, c.settimana_id||S.currentSettimana||'') +
+    '<div class="form-row">' +
+    field('cp_op','Operatore','',false,'select',opOpts, c.operatore_id||preOpId||'') +
+    field('cp_giorno','Giorno','',false,'select',gOpts, c.giorno||preGiorno||'LUN') +
+    '</div>' +
+    field('cp_tipo','Tipo Compito','',false,'select',tipoOpts, c.tipo_id||'') +
+    field('cp_note','Note', c.note||''),
+    [{label:'Annulla',cls:'btn-ghost',action:'closeModal()'},
+     {label:'Salva',cls:'btn-primary',action:'saveCompito()'}]
+  );
+  if (id) setVal('cp_sett', c.settimana_id); 
+  if (preOpId) setVal('cp_op', preOpId);
+  if (preGiorno) setVal('cp_giorno', preGiorno);
+}
+
+function saveCompito() {
+  var obj = {
+    id:           getVal('cp_id') || 'C'+Date.now(),
+    settimana_id: getVal('cp_sett'),
+    operatore_id: getVal('cp_op'),
+    giorno:       getVal('cp_giorno'),
+    tipo_id:      getVal('cp_tipo'),
+    note:         getVal('cp_note')
+  };
+  if (!obj.settimana_id||!obj.operatore_id||!obj.tipo_id){ toast('Campi obbligatori mancanti','error'); return; }
+  showLoader(true);
+  callApi('saveCompitoOperatore', obj).then(function(){
+    var ex = S.compitiOperatori.find(function(c){ return c.id===obj.id; });
+    if (ex) Object.assign(ex, obj); else S.compitiOperatori.push(obj);
+    closeModal(); renderCompitiOperatori(); toast('Compito salvato ✓','success');
+  }).catch(function(e){ toast('Errore: '+e.message,'error'); })
+    .finally(function(){ showLoader(false); });
+}
+
+function deleteCompito(id) {
+  if (!confirm('Eliminare questo compito?')) return;
+  showLoader(true);
+  callApi('deleteCompitoOperatore',{id:id}).then(function(){
+    S.compitiOperatori = S.compitiOperatori.filter(function(c){ return c.id!==id; });
+    renderCompitiOperatori(); toast('Eliminato ✓','success');
+  }).finally(function(){ showLoader(false); });
+}
+
+function openCompitoTipoForm(id) {
+  var t = id ? S.compitiTipi.find(function(x){ return x.id===id; }) : {};
+  t = t||{};
+  var catOpts = ['Clinico','Supervisione','Amministrativo','Relazionale','Organizzativo','Struttura','Turno'].map(function(c){ return {v:c,l:c}; });
+  openModal(id?'Modifica Tipo Compito':'Nuovo Tipo Compito',
+    '<div class="form-row">' +
+    field('ct_id','ID (es. CT11)', t.id||'', !!id) +
+    field('ct_durata','Durata (ore)', t.durata_ore||1) +
+    '</div>' +
+    field('ct_nome','Nome Compito', t.nome||'') +
+    field('ct_cat','Categoria','',false,'select',catOpts, t.categoria||'Clinico'),
+    [{label:'Annulla',cls:'btn-ghost',action:'closeModal()'},
+     {label:'Salva',cls:'btn-primary',action:'saveCompitoTipo()'}]
+  );
+  if (id) setVal('ct_cat', t.categoria||'Clinico');
+}
+
+function saveCompitoTipo() {
+  var obj = {id:getVal('ct_id'),nome:getVal('ct_nome'),categoria:getVal('ct_cat'),durata_ore:parseFloat(getVal('ct_durata'))||1};
+  if (!obj.nome){ toast('Nome obbligatorio','error'); return; }
+  showLoader(true);
+  callApi('saveCompitoTipo',obj).then(function(){
+    var ex = S.compitiTipi.find(function(t){ return t.id===obj.id; });
+    if (ex) Object.assign(ex,obj); else S.compitiTipi.push(obj);
+    closeModal(); renderCompitiOperatori(); toast('Tipo salvato ✓','success');
+  }).finally(function(){ showLoader(false); });
+}
+
+function deleteCompitoTipo(id) {
+  if (!confirm('Eliminare questo tipo?')) return;
+  showLoader(true);
+  callApi('deleteCompitoTipo',{id:id}).then(function(){
+    S.compitiTipi = S.compitiTipi.filter(function(t){ return t.id!==id; });
+    renderCompitiOperatori(); toast('Eliminato ✓','success');
+  }).finally(function(){ showLoader(false); });
+}
+
+function printCompitiOperatori() {
+  var sett = S.settimane.find(function(s){ return s.id===S.currentSettimana; })||{};
+  var settCompiti = S.compitiOperatori.filter(function(c){ return c.settimana_id===S.currentSettimana; });
+  var css = '<style>@page{size:A4 landscape;margin:12mm}body{font-family:Arial,sans-serif;font-size:8pt}' +
+    'table{width:100%;border-collapse:collapse}th{background:#1A3A5C;color:white;padding:4pt;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    'td{border:1pt solid #ccc;padding:3pt;vertical-align:top;font-size:7pt}' +
+    '.chip{display:inline-block;padding:1pt 4pt;border-radius:3pt;margin:1pt;font-size:6.5pt;font-weight:bold}' +
+    '.clin{background:#DBEAFE;color:#1E40AF;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    '.sup{background:#D1FAE5;color:#065F46;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    '.amm{background:#FEF3C7;color:#92400E;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    '.org{background:#EDE9FE;color:#5B21B6;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    '</style>';
+  var html = css+'<h2 style="text-align:center;margin-bottom:4pt">Comunità La Forza — Compiti Operatori</h2>' +
+    '<p style="text-align:center;margin-bottom:8pt">Settimana '+sett.tipo+' &nbsp;|&nbsp; '+sett.dal+' – '+sett.al+'</p>' +
+    '<table><thead><tr><th>Operatore</th>';
+  GIORNI.forEach(function(g){ html += '<th>'+g+'</th>'; });
+  html += '</tr></thead><tbody>';
+  S.operatori.forEach(function(op) {
+    html += '<tr><td style="font-weight:bold;text-align:left">'+op.nome+'<br><span style="font-weight:normal;color:#666">'+( op.ruolo||'')+'</span></td>';
+    GIORNI.forEach(function(g) {
+      var cc = settCompiti.filter(function(c){ return c.operatore_id===op.id&&c.giorno===g; });
+      html += '<td>';
+      cc.forEach(function(c) {
+        var tipo = S.compitiTipi.find(function(t){ return t.id===c.tipo_id; });
+        var cat = tipo?tipo.categoria:'';
+        var cls = cat==='Clinico'?'clin':cat==='Supervisione'?'sup':cat==='Amministrativo'?'amm':cat==='Organizzativo'?'org':'';
+        html += '<span class="chip '+cls+'">'+(tipo?tipo.nome:c.tipo_id)+'</span>';
+      });
+      if (!cc.length) html += '<span style="color:#ccc">—</span>';
+      html += '</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  var w = window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><title>Compiti Operatori</title></head><body>'+html+'</body></html>');
+  w.document.close(); w.focus();
+  setTimeout(function(){ w.print(); }, 600);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  REPORT & STAMPA
+// ═══════════════════════════════════════════════════════════════════
+function renderReport() {
+  var html = '<div class="card no-print"><div class="card-header"><span class="card-title">🖨️ Opzioni di Stampa</span></div>' +
+    '<div class="card-body">' +
+    '<div class="print-controls">' +
+    '<span style="font-weight:600;color:var(--navy)">Formato:</span>' +
+    '<button class="format-btn active" id="fmt-a4l" onclick="setFormat(\'a4-landscape\',this)">A4 Orizzontale</button>' +
+    '<button class="format-btn" id="fmt-a3l" onclick="setFormat(\'a3-landscape\',this)">A3 Orizzontale</button>' +
+    '<button class="format-btn" id="fmt-a3p" onclick="setFormat(\'a3-portrait\',this)">A3 Verticale</button>' +
+    '</div>' +
+    '<div class="print-controls">' +
+    '<span style="font-weight:600;color:var(--navy)">Report:</span>' +
+    '<button class="btn btn-primary" onclick="printCalendar()">📅 Calendario Settimanale</button>' +
+    '<button class="btn btn-blue" style="background:var(--sky);color:white" onclick="printOrdineServizio()">📋 Ordine di Servizio</button>' +
+    '<button class="btn btn-amber" onclick="printDebiti()">⚖️ Debiti & Crediti</button>' +
+    '</div>' +
+    '</div></div>';
+  
+  // Anteprima calendario
+  if (S.currentSettimana && S.calendario.length > 0) {
+    html += '<div id="printPreview">' + buildCalendarPrintArea() + '</div>';
+  } else {
+    html += '<div class="card"><div class="card-body" style="text-align:center;padding:40px;color:var(--gray3)">' +
+      'Genera prima un calendario per poterlo stampare.</div></div>';
+  }
+  
+  document.getElementById('pageContent').innerHTML = html;
+}
+
+var currentFormat = 'a4-landscape';
+function setFormat(fmt, btn) {
+  currentFormat = fmt;
+  document.querySelectorAll('.format-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+function buildCalendarPrintArea() {
+  var sett = S.settimane.find(function(s){ return s.id===S.currentSettimana; }) || {};
+  var giorni = ['LUN','MAR','MER','GIO','VEN','SAB','DOM'];
+  var calRows = S.calendario.filter(function(r){ return r.settimana_id===S.currentSettimana; });
+  
+  var perZona = {};
+  calRows.forEach(function(r) {
+    if (!perZona[r.zona]) perZona[r.zona] = {};
+    perZona[r.zona][r.giorno] = r;
+  });
+  
+  var html = '<div id="calendarPrintArea" style="padding:0">' +
+    '<div class="print-header" style="padding:16px 0 10px">' +
+    '<h2 style="font-family:DM Serif Display,serif;color:#1A3A5C">Comunità La Forza — Calendario Settimanale</h2>' +
+    '<p style="color:#666">Settimana '+( sett.tipo||'')+'&nbsp;&nbsp;|&nbsp;&nbsp;Dal '+( sett.dal||'')+'  al  '+(sett.al||'')+
+    '&nbsp;&nbsp;|&nbsp;&nbsp;Generato il '+new Date().toLocaleDateString('it-IT')+'</p>' +
+    '</div>' +
+    '<div class="cal-grid">' +
+    '<div class="cal-cell cal-head" style="font-size:.7rem">Zona / Mansione</div>';
+  
+  giorni.forEach(function(g){ html += '<div class="cal-cell cal-head">'+g+'</div>'; });
+  
+  Object.keys(perZona).forEach(function(zona) {
+    html += '<div class="cal-cell cal-zone">'+zona+'</div>';
+    giorni.forEach(function(g) {
+      var row = perZona[zona][g];
+      var nome = row ? (row.sostituto_nome||row.utente_nome||'—') : '—';
+      var style = (row && row.sostituto_nome) ? 'color:#92400E;font-style:italic' : '';
+      html += '<div class="cal-cell" style="text-align:center;font-size:.72rem;'+style+'">'+nome+'</div>';
+    });
+  });
+  
+  html += '</div>' +
+    '<div style="margin-top:30px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px">';
+  
+  // Firma operatori
+  var ops = S.operatori.slice(0,12);
+  ops.forEach(function(o) {
+    html += '<div style="border-bottom:1px solid #999;padding-bottom:4px;font-size:.8rem">' +
+      o.nome+'<br><small style="color:#999">Firma: _______________</small></div>';
+  });
+  html += '</div>' +
+    '<div style="margin-top:24px;text-align:right;font-size:.82rem">' +
+    '<b>La Responsabile</b><br>Dott.ssa Gessica Arancio<br>___________________________</div>' +
+    '</div>';
+  
+  return html;
+}
+
+function printCalendar() {
+  if (!S.currentSettimana) { toast('Seleziona prima una settimana','error'); return; }
+  var fmt = currentFormat;
+  var style = '<style>@page{size:';
+  if (fmt==='a4-landscape') style += 'A4 landscape';
+  else if (fmt==='a3-landscape') style += 'A3 landscape';
+  else style += 'A3 portrait';
+  style += ';margin:12mm}body{font-family:Arial,sans-serif;font-size:8pt}.cal-grid{display:grid;grid-template-columns:140px repeat(7,1fr);border:1pt solid #ccc;page-break-inside:avoid}.cal-cell{padding:4pt 6pt;border-right:1pt solid #ccc;border-bottom:1pt solid #ccc;font-size:7pt}.cal-head{background:#1A3A5C;color:white;font-weight:bold;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}.cal-zone{background:#f4f4f2;font-weight:bold;font-size:7pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}</style>';
+  
+  var content = style + buildCalendarPrintArea();
+  var w = window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><title>Calendario La Forza</title></head><body>'+content+'</body></html>');
+  w.document.close();
+  w.focus();
+  setTimeout(function(){ w.print(); }, 500);
+}
+
+function buildOrdineServizioHTML(fmt, oggetto, noteExtra) {
+  var sett = S.settimane.find(function(s){ return s.id===S.currentSettimana; }) || {};
+  var giorni = ['LUN','MAR','MER','GIO','VEN','SAB','DOM'];
+  var oggi = new Date().toLocaleDateString('it-IT', {day:'2-digit',month:'2-digit',year:'numeric'});
+
+  // ── Page size ──
+  var pageSize = fmt==='a4-landscape' ? 'A4 landscape' : fmt==='a3-landscape' ? 'A3 landscape' : fmt==='a3-portrait' ? 'A3 portrait' : 'A4 portrait';
+  var marginMm = 18;
+
+  // ── CSS ──
+  var css = [
+    '@page { size: '+pageSize+'; margin: '+marginMm+'mm; }',
+    'body { font-family: "Times New Roman", Times, serif; font-size: 10pt; color: #000; line-height: 1.45; }',
+    'h1.intestazione { font-size: 13pt; font-weight: bold; text-align: center; margin: 0 0 2pt; }',
+    'h2.intestazione { font-size: 11pt; font-weight: normal; text-align: center; margin: 0 0 10pt; letter-spacing: .05em; }',
+    '.destinatario { text-align: right; font-weight: bold; font-size: 10pt; margin-bottom: 14pt; }',
+    '.oggetto-line { font-weight: bold; text-decoration: underline; font-size: 10.5pt; margin: 0 0 8pt; }',
+    'p.testo { margin: 0 0 5pt; text-align: justify; font-style: italic; text-decoration: underline; font-size: 9.5pt; }',
+    /* TABELLA OPERATORI */
+    'table.cal { width: 100%; border-collapse: collapse; margin: 8pt 0; font-size: 8pt; page-break-inside: avoid; }',
+    'table.cal th { background: #1A3A5C; color: #fff; padding: 4pt 6pt; text-align: center; font-size: 8pt; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; border: 1pt solid #1A3A5C; }',
+    'table.cal th.nominativo { text-align: left; width: 140pt; }',
+    'table.cal td { border: 1pt solid #AECBE8; padding: 3pt 5pt; font-size: 7.5pt; text-align: center; vertical-align: middle; }',
+    'table.cal td.nome { text-align: left; font-weight: 600; background: #EEF4FB; -webkit-print-color-adjust: exact; print-color-adjust: exact; }',
+    'table.cal td.sostituito { font-style: italic; color: #92400E; background: #FEF3C7; -webkit-print-color-adjust: exact; print-color-adjust: exact; }',
+    'table.cal tr.section-sep td { background: #1A3A5C; color: #fff; font-weight: bold; font-size: 8pt; padding: 4pt 6pt; text-align: left; -webkit-print-color-adjust: exact; print-color-adjust: exact; border: 1pt solid #1A3A5C; }',
+    /* NOTE */
+    '.note-box { background: #FFFDE7; border: 1pt solid #E6B800; padding: 6pt 10pt; margin: 8pt 0; page-break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }',
+    '.note-box p { margin: 2pt 0; font-size: 8.5pt; font-weight: bold; }',
+    /* CHIUSURA */
+    '.chiusura { margin: 10pt 0 6pt; font-size: 9.5pt; }',
+    '.chiusura p { margin: 1pt 0; }',
+    /* FIRME */
+    '.presa-visione-title { font-weight: bold; font-size: 10pt; margin: 12pt 0 6pt; border-top: 1pt solid #ccc; padding-top: 8pt; }',
+    '.firma-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10pt 18pt; margin-bottom: 14pt; }',
+    '.firma-item { padding: 18pt 0 2pt; border-bottom: 1pt solid #333; font-size: 8.5pt; min-height: 28pt; }',
+    '.firma-item .nome-op { font-size: 8pt; color: #555; }',
+    /* RESPONSABILE */
+    '.responsabile { text-align: right; margin-top: 16pt; font-size: 9.5pt; }',
+    '.responsabile .firma-line { border-bottom: 1pt solid #333; width: 180pt; display: inline-block; margin-top: 12pt; }',
+    '.nota-finale { margin-top: 14pt; text-align: center; font-style: italic; font-size: 8.5pt; border-top: 1pt dashed #ccc; padding-top: 7pt; color: #444; }',
+    '.sezione-title { font-weight: bold; font-size: 9.5pt; margin: 10pt 0 3pt; text-decoration: underline; }'
+  ].join('\n');
+
+  // ── Calendario operatori per giorno ──
+  // Raggruppa: per ogni operatore mostra le attività assegnate in ogni giorno
+  var calRows = S.calendario.filter(function(r){ return r.settimana_id === S.currentSettimana; });
+
+  // Costruisci mappa: operatore → giorno → array di mansioni
+  // (Gli operatori NON sono nel calendario degli utenti — il calendario è degli utenti)
+  // Per gli operatori usiamo S.operatori e mostriamo le mansioni supervisionate
+
+  // TABELLA OPERATORI: Nominativo | Lun Mar Mer Gio Ven Sab Dom
+  function buildTabella(lista, sezioneLabel, cssClass) {
+    var html = '';
+    html += '<tr class="section-sep"><td colspan="8">'+sezioneLabel+'</td></tr>';
+    html += '<tr>';
+    html += '<th class="nominativo">Nominativo</th>';
+    giorni.forEach(function(g){ html += '<th>'+g+'</th>'; });
+    html += '</tr>';
+    lista.forEach(function(persona) {
+      // Trova le assegnazioni di questa persona nella settimana
+      var assPerGiorno = {};
+      calRows.forEach(function(r) {
+        var nomeMatch = (r.utente_nome === persona.nome || r.sostituto_nome === persona.nome);
+        if (nomeMatch) {
+          if (!assPerGiorno[r.giorno]) assPerGiorno[r.giorno] = [];
+          assPerGiorno[r.giorno].push(r);
+        }
+      });
+      html += '<tr>';
+      html += '<td class="nome '+cssClass+'">'+persona.nome+'</td>';
+      giorni.forEach(function(g) {
+        var ass = assPerGiorno[g];
+        if (ass && ass.length > 0) {
+          var isSost = ass[0].sostituto_nome === persona.nome;
+          html += '<td class="'+(isSost?'sostituito':'')+'" title="'+(ass.map(function(a){ return a.zona; }).join(', '))+'">';
+          html += ass.map(function(a){ return '<span style="display:block;font-size:6.5pt;line-height:1.3">'+abbr(a.zona)+'</span>'; }).join('');
+          html += '</td>';
+        } else {
+          html += '<td style="color:#ccc">—</td>';
+        }
+      });
+      html += '</tr>';
+    });
+    return html;
+  }
+
+  function abbr(s) {
+    if (!s) return '';
+    var map = {
+      'Sala':'Sala','Ufficio':'Uff.','Atrio':'Atrio','Anfiteatro':'Anfit.',
+      'Corridoi':'Corr.','Cucina':'Cucina','Mensa':'Mensa','Lavanderia':'Lav.',
+      'Responsabilità':'Resp.','Manutenzione':'Man.','Stanze':'Stanze'
+    };
+    return map[s] || s.substring(0,6);
+  }
+
+  // Corpo del documento
+  var body = '';
+
+  // INTESTAZIONE
+  body += '<h1 class="intestazione">COMUNITÀ TERAPEUTICA "LA FORZA"</h1>';
+  body += '<h2 class="intestazione">Calatafimi-Segesta (TP) — Via Piersanti Mattarella SnC</h2>';
+  body += '<hr style="border:none;border-top:1.5pt solid #1A3A5C;margin:4pt 0 12pt">';
+
+  // DESTINATARIO
+  body += '<div class="destinatario">Ai dipendenti della Comunità La Forza</div>';
+
+  // OGGETTO
+  var oggettoTesto = oggetto || 'Ordine di servizio — Settimana '+(sett.tipo||'')+'  dal '+(sett.dal||'...')+' al '+(sett.al||'...');
+  body += '<p class="oggetto-line">OGGETTO:&nbsp;&nbsp;'+oggettoTesto+'</p>';
+
+  // TESTO INTRODUTTIVO
+  body += '<p class="testo">La sottoscritta Gessica Arancio nata ad Alcamo (TP) il 09/11/1991, in qualità di Responsabile di struttura della Comunità «LA FORZA» con sede operativa in Calatafimi-Segesta, in via Piersanti Mattarella SnC.</p>';
+  body += '<p class="testo">Con il presente ordine di servizio, si dispone quanto segue:</p>';
+  body += '<p class="testo">I dipendenti sono invitati a visualizzare le consegne da me redatte, in particolare le attività terapeutiche organizzate per gli ospiti della comunità.</p>';
+  body += '<p class="testo">Gli stessi sono tenuti a svolgere i compiti assegnati nel calendario settimanale redatto dalla sottoscritta. Si prega di voler dare prova attraverso la firma nel calendario ed eventuale motivazione o giustificazione per il mancato svolgimento del medesimo compito assegnato.</p>';
+  body += '<p class="testo">La mancata giustificazione comporterà eventuale richiamo.</p>';
+  body += '<p class="testo">Il presente ordine di servizio dovrà essere firmato dai dipendenti come presa visione.</p>';
+  body += '<p class="testo">Si allega calendario settimanale.</p>';
+
+  // TABELLA OPERATORI
+  if (S.operatori.length > 0) {
+    body += '<p class="sezione-title" style="margin-top:10pt">CALENDARIO OPERATORI</p>';
+    body += '<table class="cal"><tbody>';
+    body += buildTabella(S.operatori, '🧑‍⚕️  OPERATORI', 'op-name');
+    body += '</tbody></table>';
+  }
+
+  // TABELLA UTENTI
+  if (S.utenti.length > 0) {
+    body += '<p class="sezione-title">CALENDARIO UTENTI</p>';
+    body += '<table class="cal"><tbody>';
+    body += buildTabella(S.utenti, '👤  UTENTI', 'utente-name');
+    body += '</tbody></table>';
+  }
+
+  // NOTE OPERATIVE
+  body += '<div class="note-box">';
+  body += '<p style="font-size:9pt;font-weight:bold;margin-bottom:4pt;text-decoration:underline">NOTE OPERATIVE:</p>';
+  body += '<p>TUTTE LE ATTIVITÀ DOVRANNO ESSERE SVOLTE CON LA PRESENZA DELL\'OPERATORE; I RAGAZZI NON VANNO MAI LASCIATI DA SOLI.</p>';
+  body += '<p>LE ATTIVITÀ SARANNO DELLA DURATA DI 1 ORA / 1 ORA E MEZZA. DOPO AVRETE TUTTO IL TEMPO PER SVOLGERE TUTTA LA BUROCRAZIA E LE CHIAMATE FAMILIARI.</p>';
+  body += '<p>OGNI OPERATORE DOVRÀ AGGIORNARE NEL DIARIO DI BORDO L\'ATTIVITÀ SVOLTA E SCRIVERE GLI OSPITI CHE NON HANNO PARTECIPATO.</p>';
+  body += '<p>SI PREGA I COLLABORATORI DI NON USARE IL TELEFONINO DURANTE LE ORE LAVORATIVE E DI STARE FUORI A SUPERVISIONARE I RAGAZZI.</p>';
+  if (noteExtra) body += '<p style="margin-top:5pt">'+noteExtra+'</p>';
+  body += '</div>';
+
+  // CHIUSURA
+  body += '<div class="chiusura">';
+  body += '<p>Sicuri di una vostra completa disponibilità,</p>';
+  body += '<p>Porgo Cordiali Saluti,</p>';
+  body += '<p>Castellammare del Golfo, lì&nbsp;&nbsp;<span style="border-bottom:1pt solid #333;display:inline-block;width:160pt">&nbsp;</span></p>';
+  body += '</div>';
+
+  // PRESA VISIONE
+  body += '<div class="presa-visione-title">PRESA VISIONE:</div>';
+  body += '<div class="firma-grid">';
+  // Tutti gli operatori + tutti gli utenti (o solo operatori, come vuoi)
+  var tuttiFirma = S.operatori.slice();
+  tuttiFirma.forEach(function(op) {
+    body += '<div class="firma-item">';
+    body += '<div class="nome-op">'+op.nome+'</div>';
+    body += '<div style="font-size:7pt;color:#999;margin-top:2pt">'+( op.ruolo||'Operatore')+'</div>';
+    body += '</div>';
+  });
+  body += '</div>';
+
+  // LA RESPONSABILE
+  body += '<div class="responsabile">';
+  body += '<div>La Responsabile</div>';
+  body += '<div><strong>Dott.ssa Gessica Arancio</strong></div>';
+  body += '<div class="firma-line">&nbsp;</div>';
+  body += '</div>';
+
+  // NOTA FINALE
+  body += '<div class="nota-finale">';
+  body += '«Eventuali modifiche all\'ordine di servizio devono essere comunicate alla responsabile Gessica Arancio.»';
+  body += '</div>';
+
+  return '<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>Ordine di Servizio — La Forza</title>' +
+    '<style>'+css+'</style></head><body>'+body+'</body></html>';
+}
+
+function printOrdineServizio() {
+  // Apri prima un modal per permettere di personalizzare oggetto e note
+  openModal('📋 Stampa Ordine di Servizio',
+    '<div class="form-group"><label class="form-label">Oggetto (lascia vuoto per automatico)</label>' +
+    '<input id="os_oggetto" class="form-control" placeholder="es. Ordine di servizio settimana 20 — dal 12/05 al 18/05" /></div>' +
+    '<div class="form-group"><label class="form-label">Note aggiuntive (opzionale)</label>' +
+    '<textarea id="os_note" class="form-control" rows="3" placeholder="Eventuali comunicazioni extra..."></textarea></div>' +
+    '<div class="form-group"><label class="form-label">Formato carta</label>' +
+    '<select id="os_fmt" class="form-control">' +
+    '<option value="a4-portrait">A4 Verticale (consigliato)</option>' +
+    '<option value="a4-landscape">A4 Orizzontale</option>' +
+    '<option value="a3-portrait">A3 Verticale</option>' +
+    '<option value="a3-landscape">A3 Orizzontale</option>' +
+    '</select></div>',
+    [
+      {label:'Annulla', cls:'btn-ghost', action:'closeModal()'},
+      {label:'🖨️ Anteprima & Stampa', cls:'btn-primary', action:'doStampaOrdine()'}
+    ]
+  );
+}
+
+function doStampaOrdine() {
+  var oggetto = document.getElementById('os_oggetto') ? document.getElementById('os_oggetto').value : '';
+  var note    = document.getElementById('os_note')    ? document.getElementById('os_note').value    : '';
+  var fmt     = document.getElementById('os_fmt')     ? document.getElementById('os_fmt').value     : 'a4-portrait';
+  closeModal();
+  var html = buildOrdineServizioHTML(fmt, oggetto, note);
+  var w = window.open('','_blank','width=900,height=700');
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(function(){ w.print(); }, 800);
+}
+
+function printDebiti() {
+  var aperti = S.debiti.filter(function(d){ return d.stato==='aperto'; });
+  var style = '<style>@page{size:A4;margin:15mm}body{font-family:Arial,sans-serif;font-size:9pt}table{width:100%;border-collapse:collapse}th{background:#1A3A5C;color:white;padding:5pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}td{padding:4pt 6pt;border:1pt solid #ccc}.open{color:#C0392B}.closed{color:#2A7A2A}</style>';
+  var html = style + '<h2>Comunità La Forza — Debiti & Crediti</h2>' +
+    '<p>Generato il '+new Date().toLocaleDateString('it-IT')+'</p><br>' +
+    '<table><thead><tr><th>Debitore</th><th>Creditore</th><th>Mansione</th><th>Settimana</th><th>Data</th><th>Stato</th></tr></thead><tbody>';
+  S.debiti.forEach(function(d) {
+    var mansione = S.mansioni.find(function(m){ return m.id===d.mansione_ref; });
+    html += '<tr><td>'+d.debitore_nome+'</td><td>'+d.creditore_nome+'</td>' +
+      '<td>'+(mansione?mansione.descrizione:d.mansione_ref)+'</td>' +
+      '<td>'+d.settimana_ref+'</td><td>'+d.data_creazione+'</td>' +
+      '<td class="'+(d.stato==='aperto'?'open':'closed')+'"><b>'+(d.stato==='aperto'?'APERTO':'SALDATO')+'</b></td></tr>';
+  });
+  html += '</tbody></table>';
+  var w = window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><title>Debiti La Forza</title></head><body>'+html+'</body></html>');
+  w.document.close(); w.focus();
+  setTimeout(function(){ w.print(); }, 500);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  UTILITY UI
+// ═══════════════════════════════════════════════════════════════════
+function field(id, label, value, disabled, type, opts, selected) {
+  var inp = '';
+  if (type==='select') {
+    inp = '<select id="'+id+'" class="form-control">';
+    (opts||[]).forEach(function(o){ inp += '<option value="'+o.v+'"'+(String(o.v)===String(selected)?' selected':'')+'>'+o.l+'</option>'; });
+    inp += '</select>';
+  } else {
+    inp = '<input id="'+id+'" class="form-control" value="'+( value||'')+'"'+(disabled?' disabled':'')+' />';
+  }
+  return '<div class="form-group"><label class="form-label">'+label+'</label>'+inp+'</div>';
+}
+
+function selField(id, opts, selected) {
+  var s = '<select id="'+id+'" class="form-control">';
+  opts.forEach(function(o){ s += '<option value="'+o.v+'"'+(o.v===selected?' selected':'')+'>'+o.l+'</option>'; });
+  return s + '</select>';
+}
+
+function buildSelect(id, label, opts, selected) {
+  return '<div class="form-group"><label class="form-label">'+label+'</label>' + selField(id, opts, selected) + '</div>';
+}
+
+function getVal(id) {
+  var el = document.getElementById(id);
+  return el ? el.value : '';
+}
+
+function setVal(id, val) {
+  var el = document.getElementById(id);
+  if (el) el.value = val;
+}
+
+function esc(s) {
+  return (s||'').replace(/'/g,"&#39;").replace(/"/g,'&quot;');
+}
+
+function filterTable(q, tableId) {
+  var rows = document.querySelectorAll('#'+tableId+' tbody tr');
+  var lq = q.toLowerCase();
+  rows.forEach(function(r) {
+    r.style.display = r.textContent.toLowerCase().includes(lq) ? '' : 'none';
+  });
+}
+
+function switchTab(el, panelId) {
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+  el.classList.add('active');
+  var panel = document.getElementById(panelId);
+  if (panel) panel.classList.add('active');
+}
+
+function openModal(title, body, buttons) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = body;
+  var foot = '';
+  (buttons||[]).forEach(function(b){ foot += '<button class="btn '+b.cls+'" onclick="'+b.action+'">'+b.label+'</button>'; });
+  document.getElementById('modalFooter').innerHTML = foot;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function showLoader(show) {
+  document.getElementById('loadingOverlay').classList.toggle('show', show);
+}
+
+function toast(msg, type) {
+  var el = document.createElement('div');
+  el.className = 'toast' + (type ? ' '+type : '');
+  el.textContent = msg;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(function(){ el.remove(); }, 3200);
+}
+
+function deleteItem(type, id, nome) {
+  if (!confirm('Eliminare "'+nome+'"?')) return;
+  var actionMap = { utenti:'deleteUtente', operatori:'deleteOperatore', mansioni:'deleteMansione' };
+  var refreshMap = {
+    utenti: function(){ return callApi('getUtenti').then(function(d){ S.utenti=d||[]; renderUtenti(); }); },
+    operatori: function(){ return callApi('getOperatori').then(function(d){ S.operatori=d||[]; renderOperatori(); }); },
+    mansioni: function(){ return callApi('getMansioni').then(function(d){ S.mansioni=d||[]; renderMansioni(); }); },
+  };
+  showLoader(true);
+  callApi(actionMap[type], { id: id }).then(refreshMap[type])
+    .then(function(){ toast('Eliminato ✓','success'); })
+    .catch(function(e){ toast('Errore: '+e.message,'error'); })
+    .finally(function(){ showLoader(false); });
+}
+
+function initSheets() {
+  showLoader(true);
+  callApi('initSheets').then(function(){
+    toast('Database inizializzato ✓','success');
+    return loadAll();
+  }).finally(function(){ showLoader(false); });
+}
+
+
+// ═══════════════════════════════════════════════════════════════════
+//  MOBILE SIDEBAR TOGGLE
+// ═══════════════════════════════════════════════════════════════════
+function toggleSidebar() {
+  var sidebar  = document.querySelector('.sidebar');
+  var overlay  = document.getElementById('sidebarOverlay');
+  var btn      = document.getElementById('hamburgerBtn');
+  var isOpen   = sidebar.classList.contains('open');
+  if (isOpen) {
+    closeSidebar();
+  } else {
+    sidebar.classList.add('open');
+    overlay.classList.add('open');
+    btn.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeSidebar() {
+  var sidebar = document.querySelector('.sidebar');
+  var overlay = document.getElementById('sidebarOverlay');
+  var btn     = document.getElementById('hamburgerBtn');
+  sidebar.classList.remove('open');
+  overlay.classList.remove('open');
+  btn.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Auto-close sidebar on nav item click (mobile)
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.nav-item').forEach(function(el) {
+    el.addEventListener('click', function() {
+      if (window.innerWidth <= 768) closeSidebar();
+    });
+  });
+});
+
+// Close sidebar on resize to desktop
+window.addEventListener('resize', function() {
+  if (window.innerWidth > 768) closeSidebar();
+});
+
+// Close modal on overlay click
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script></script>
+</body>
+</html>
