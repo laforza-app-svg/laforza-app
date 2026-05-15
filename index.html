@@ -747,6 +747,12 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
       <div class="nav-item" onclick="showPage('testi')" id="nav-testi">
         <span class="icon">✍️</span> Testi Ordine
       </div>
+      <div class="nav-item" onclick="showPage('permessi')" id="nav-permessi">
+        <span class="icon">🔐</span> Permessi Ruoli
+      </div>
+      <div class="nav-item" onclick="showPage('log')" id="nav-log">
+        <span class="icon">📋</span> Log Azioni
+      </div>
       <div class="nav-item" onclick="showPage('report')" id="nav-report">
         <span class="icon">🖨️</span> Stampa Report
       </div>
@@ -823,6 +829,7 @@ var S = {
   turniOperatori: [], compitiOperatori: [], compitiTipi: [],
   ruoli: [], presenzeFisse: [],
   testiOrdine: {}, noteUtenti: [],
+  ruoliPermessi: [], logAzioni: [],
   currentPage: 'dashboard',
   currentSettimana: null,
   settimane: [],   // lista settimane generate
@@ -953,6 +960,18 @@ function mockData(action) {
   if (action==='generaCalendario') return [];
   if (action==='registraSostituzione') return {ok:true,debito_id:'D'+Date.now()};
   if (action==='saldaDebito') return true;
+  if (action==='getRuoliPermessi') return [
+    {id:'RP_admin_all',ruolo:'admin',sezione:'*',permesso:'rw'},
+    {id:'RP_resp_all',ruolo:'Responsabile',sezione:'*',permesso:'rw'},
+    {id:'RP_edu_dashboard',ruolo:'Educatore',sezione:'dashboard',permesso:'r'},
+    {id:'RP_edu_calendario',ruolo:'Educatore',sezione:'calendario',permesso:'rw'},
+    {id:'RP_edu_sost',ruolo:'Educatore',sezione:'sostituzioni',permesso:'rw'},
+    {id:'RP_op_dashboard',ruolo:'operatore',sezione:'dashboard',permesso:'r'},
+    {id:'RP_op_calendario',ruolo:'operatore',sezione:'calendario',permesso:'r'},
+  ];
+  if (action==='logAzione') return true;
+  if (action==='getLogAzioni') return [];
+  if (action==='saveRuoloPermesso'||action==='deleteRuoloPermesso') return true;
   if (action==='getTestiOrdine') return {
     testo_intro: 'La sottoscritta Gessica Arancio...testo di default...',
     note_operative: 'TUTTE LE ATTIVITA\' DOVRANNO ESSERE SVOLTE CON LA PRESENZA DELL\'OPERATORE.',
@@ -996,6 +1015,92 @@ function mockData(action) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+//  SISTEMA PERMESSI
+// ═══════════════════════════════════════════════════════════════════
+
+// Controlla se l'utente corrente ha accesso a una sezione
+// permesso: 'r' (lettura) o 'rw' (lettura+scrittura)
+function hasPermesso(sezione, permesso) {
+  if (!currentUser) return false;
+  var ruolo = currentUser.ruolo || 'operatore';
+  if (ruolo === 'admin') return true; // admin vede tutto
+  var perms = S.ruoliPermessi || [];
+  // Controlla wildcard *
+  var all = perms.find(function(p){ return p.ruolo===ruolo && p.sezione==='*'; });
+  if (all) {
+    if (permesso === 'r') return true;
+    return all.permesso === 'rw';
+  }
+  // Controlla sezione specifica
+  var perm = perms.find(function(p){ return p.ruolo===ruolo && p.sezione===sezione; });
+  if (!perm) return false;
+  if (permesso === 'r') return perm.permesso === 'r' || perm.permesso === 'rw';
+  return perm.permesso === 'rw';
+}
+
+function canWrite(sezione) { return hasPermesso(sezione, 'rw'); }
+function canRead(sezione)  { return hasPermesso(sezione, 'r'); }
+
+// Applica permessi al menu — nasconde voci non accessibili
+function applyPermessiMenu() {
+  var menuMap = {
+    'nav-dashboard':  'dashboard',
+    'nav-utenti':     'utenti',
+    'nav-operatori':  'operatori',
+    'nav-mansioni':   'mansioni',
+    'nav-calendario': 'calendario',
+    'nav-turni':      'turni',
+    'nav-presenze':   'presenze',
+    'nav-compiti':    'compiti',
+    'nav-ruoli':      'ruoli',
+    'nav-sostituzioni':'sostituzioni',
+    'nav-debiti':     'debiti',
+    'nav-testi':      'testi',
+    'nav-report':     'report',
+  };
+  Object.keys(menuMap).forEach(function(navId) {
+    var el = document.getElementById(navId);
+    if (el) {
+      el.style.display = canRead(menuMap[navId]) ? '' : 'none';
+    }
+  });
+  // Bottom nav
+  var bnavMap = {
+    'bnav-dashboard':  'dashboard',
+    'bnav-utenti':     'utenti',
+    'bnav-calendario': 'calendario',
+    'bnav-turni':      'turni',
+  };
+  Object.keys(bnavMap).forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = canRead(bnavMap[id]) ? '' : 'none';
+  });
+}
+
+// Log un'azione nel DB
+function logAction(azione, sezione, dettaglio) {
+  if (!currentUser) return;
+  callApi('logAzione', {
+    username:  currentUser.username,
+    ruolo:     currentUser.ruolo,
+    azione:    azione,
+    sezione:   sezione,
+    dettaglio: dettaglio || ''
+  }).catch(function(){}); // log silenzioso — non blocca mai
+}
+
+// Mostra pagina "accesso negato"
+function renderAccesNegato(sezione) {
+  document.getElementById('pageContent').innerHTML =
+    '<div class="card" style="text-align:center;padding:60px 20px">' +
+    '<div style="font-size:3rem;margin-bottom:14px">🔒</div>' +
+    '<h3 style="color:var(--navy);margin-bottom:8px">Accesso non autorizzato</h3>' +
+    '<p style="color:var(--gray3)">Non hai i permessi per accedere alla sezione <b>' + sezione + '</b>.</p>' +
+    '<p style="color:var(--gray3);font-size:.85rem;margin-top:8px">Contatta la Responsabile per richiedere l\'accesso.</p>' +
+    '</div>';
+}
+
+// ═══════════════════════════════════════════════════════════════════
 //  INIT
 // ═══════════════════════════════════════════════════════════════════
 window.addEventListener('load', function() {
@@ -1032,6 +1137,7 @@ function loadAll() {
     callApi('getRuoli').then(function(d){ S.ruoli = d||[]; }),
     callApi('getPresenzeFisse').then(function(d){ S.presenzeFisse = d||[]; }),
     callApi('getTestiOrdine').then(function(d){ S.testiOrdine = d||{}; }),
+    callApi('getRuoliPermessi').then(function(d){ S.ruoliPermessi = d||[]; }),
     callApi('getNoteUtente',{}).then(function(d){ S.noteUtenti = d||[]; }),
   ]).catch(function(e){ toast('Errore caricamento: '+e.message,'error'); })
     .finally(function(){ showLoader(false); });
@@ -1041,7 +1147,14 @@ function loadAll() {
 //  NAVIGATION
 // ═══════════════════════════════════════════════════════════════════
 function showPage(page) {
+  // Verifica permessi — blocca accesso diretto
+  if (page !== 'dashboard' && !canRead(page)) {
+    renderAccesNegato(page);
+    return;
+  }
   S.currentPage = page;
+  // Log navigazione
+  logAction('navigazione', page, '');
   // Sidebar nav
   document.querySelectorAll('.nav-item').forEach(function(el){ el.classList.remove('active'); });
   var navEl = document.getElementById('nav-'+page);
@@ -1059,7 +1172,9 @@ function showPage(page) {
     turni:'Turni Operatori', compiti:'Compiti Operatori',
     ruoli:'Ruoli & Competenze', presenze:'Presenze Fisse',
     sostituzioni:'Sostituzioni', debiti:'Debiti & Crediti',
-    testi:'Testi & Note Ordine di Servizio', report:'Stampa Report'
+    testi:'Testi & Note Ordine di Servizio',
+    permessi:'Gestione Permessi Ruoli', log:'Log Azioni',
+    report:'Stampa Report'
   };
   document.getElementById('pageTitle').textContent = titles[page]||page;
   document.getElementById('topbarActions').innerHTML = '';
@@ -1070,7 +1185,7 @@ function showPage(page) {
     turni: renderTurniOperatori, compiti: renderCompitiOperatori,
     ruoli: renderRuoli, presenze: renderPresenzeFisse,
     sostituzioni: renderSostituzioni, debiti: renderDebiti,
-    testi: renderTestiOrdine, report: renderReport
+    testi: renderTestiOrdine, permessi: renderPermessi, log: renderLog, report: renderReport
   };
   if (pages[page]) pages[page]();
 }
@@ -1215,6 +1330,7 @@ function saveUtente() {
   if (!obj.nome) { toast('Nome obbligatorio','error'); return; }
   showLoader(true);
   callApi('saveUtente', obj).then(function() {
+    logAction('salva', 'utenti', 'Utente: '+obj.nome);
     return callApi('getUtenti').then(function(d){ S.utenti = d||[]; });
   }).then(function() {
     closeModal(); renderUtenti(); toast('Utente salvato ✓','success');
@@ -2502,6 +2618,152 @@ function saveAllTesti() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+//  GESTIONE PERMESSI RUOLI
+// ═══════════════════════════════════════════════════════════════════
+var SEZIONI_LABELS = {
+  dashboard:'Dashboard', utenti:'Utenti', operatori:'Operatori',
+  mansioni:'Mansioni', calendario:'Calendario Utenti', turni:'Turni Operatori',
+  presenze:'Presenze Fisse', compiti:'Compiti Operatori', ruoli:'Ruoli & Competenze',
+  sostituzioni:'Sostituzioni', debiti:'Debiti/Crediti', testi:'Testi Ordine',
+  report:'Stampa Report'
+};
+
+var RUOLI_LISTA = ['admin','Responsabile','Educatore','Infermiere','O.S.S.','Cuoco','operatore'];
+
+function renderPermessi() {
+  if (!canWrite('permessi') && currentUser && currentUser.ruolo !== 'admin') {
+    renderAccesNegato('permessi'); return;
+  }
+  document.getElementById('topbarActions').innerHTML =
+    '<button class="btn btn-success" onclick="savePermessi()">💾 Salva Permessi</button>';
+
+  var html = '<div class="card"><div class="card-header">' +
+    '<span class="card-title">🔐 Permessi per Ruolo</span>' +
+    '<span style="font-size:.78rem;color:var(--gray3)">Solo Admin può modificare i permessi</span>' +
+    '</div><div class="card-body">' +
+    '<p style="font-size:.82rem;color:var(--gray4);margin-bottom:16px">' +
+    'Per ogni ruolo imposta il livello di accesso a ogni sezione: ' +
+    '<b>🚫 Nessuno</b>, <b>👁 Solo lettura</b>, <b>✏️ Lettura + Scrittura</b>.</p>';
+
+  // Tabella permessi
+  html += '<div style="overflow-x:auto"><table style="font-size:.8rem;min-width:700px">' +
+    '<thead><tr><th style="min-width:120px">Sezione</th>';
+  RUOLI_LISTA.filter(function(r){ return r !== 'admin'; }).forEach(function(r) {
+    html += '<th style="text-align:center;min-width:90px">' + r + '</th>';
+  });
+  html += '</tr></thead><tbody>';
+
+  Object.keys(SEZIONI_LABELS).forEach(function(sez, si) {
+    html += '<tr' + (si%2===0 ? ' style="background:var(--gray1)"' : '') + '>';
+    html += '<td style="font-weight:600;padding:6px 10px">' + SEZIONI_LABELS[sez] + '</td>';
+    RUOLI_LISTA.filter(function(r){ return r !== 'admin'; }).forEach(function(ruolo) {
+      // Trova permesso attuale
+      var perm = S.ruoliPermessi.find(function(p){
+        return p.ruolo===ruolo && (p.sezione===sez || p.sezione==='*');
+      });
+      var val = perm ? perm.permesso : '';
+      html += '<td style="text-align:center;padding:4px">' +
+        '<select id="perm_' + ruolo.replace(/[.]/g,'') + '_' + sez + '" class="form-control" style="font-size:.75rem;padding:4px 6px">' +
+        '<option value=""' + (val===''?' selected':'') + '>🚫 Nessuno</option>' +
+        '<option value="r"' + (val==='r'?' selected':'') + '>👁 Lettura</option>' +
+        '<option value="rw"' + (val==='rw'?' selected':'') + '>✏️ Scrittura</option>' +
+        '</select></td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  html += '</div></div>';
+
+  document.getElementById('pageContent').innerHTML = html;
+}
+
+function savePermessi() {
+  if (!canWrite('permessi') && currentUser && currentUser.ruolo !== 'admin') {
+    toast('Non hai i permessi per modificare i ruoli', 'error'); return;
+  }
+  showLoader(true);
+  var saves = [];
+  RUOLI_LISTA.filter(function(r){ return r !== 'admin'; }).forEach(function(ruolo) {
+    Object.keys(SEZIONI_LABELS).forEach(function(sez) {
+      var selId = 'perm_' + ruolo.replace(/[.]/g,'') + '_' + sez;
+      var el = document.getElementById(selId);
+      if (!el) return;
+      var val = el.value;
+      // Trova record esistente
+      var existing = S.ruoliPermessi.find(function(p){
+        return p.ruolo===ruolo && p.sezione===sez;
+      });
+      if (val === '' && existing) {
+        saves.push(callApi('deleteRuoloPermesso', {id: existing.id}).then(function(){
+          S.ruoliPermessi = S.ruoliPermessi.filter(function(p){ return p.id !== existing.id; });
+        }));
+      } else if (val !== '') {
+        var obj = existing
+          ? Object.assign({}, existing, {permesso: val})
+          : {id: 'RP_'+ruolo.replace(/[.]/g,'')+'_'+sez+'_'+Date.now(), ruolo:ruolo, sezione:sez, permesso:val};
+        saves.push(callApi('saveRuoloPermesso', obj).then(function(){
+          if (existing) existing.permesso = val;
+          else S.ruoliPermessi.push(obj);
+        }));
+      }
+    });
+  });
+  Promise.all(saves).then(function(){
+    applyPermessiMenu();
+    logAction('modifica_permessi', 'permessi', 'Permessi aggiornati');
+    toast('Permessi salvati ✓', 'success');
+  }).catch(function(e){ toast('Errore: '+e.message,'error'); })
+    .finally(function(){ showLoader(false); });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  LOG AZIONI
+// ═══════════════════════════════════════════════════════════════════
+function renderLog() {
+  if (!canRead('log') && currentUser && currentUser.ruolo !== 'admin') {
+    renderAccesNegato('log'); return;
+  }
+  document.getElementById('topbarActions').innerHTML =
+    '<button class="btn btn-ghost" onclick="loadLog()">🔄 Aggiorna</button>';
+
+  document.getElementById('pageContent').innerHTML =
+    '<div class="card"><div class="card-header"><span class="card-title">📋 Log Azioni</span>' +
+    '<span style="font-size:.78rem;color:var(--gray3)">Ultime 200 azioni registrate</span></div>' +
+    '<div class="table-wrap"><table id="logTable">' +
+    '<thead><tr><th>Data/Ora</th><th>Utente</th><th>Ruolo</th><th>Azione</th><th>Sezione</th><th>Dettaglio</th></tr></thead>' +
+    '<tbody id="logBody"><tr><td colspan="6" style="text-align:center;padding:20px;color:var(--gray3)">Caricamento...</td></tr></tbody>' +
+    '</table></div></div>';
+
+  loadLog();
+}
+
+function loadLog() {
+  callApi('getLogAzioni').then(function(rows) {
+    var tbody = document.getElementById('logBody');
+    if (!tbody) return;
+    if (!rows || rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--gray3)">Nessuna azione registrata</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(function(r) {
+      var azioneColor = r.azione === 'login' ? 'var(--green)' :
+                        r.azione === 'modifica_permessi' ? 'var(--red)' : 'var(--gray4)';
+      return '<tr>' +
+        '<td style="font-size:.78rem;white-space:nowrap">' + (r.data||'—') + '</td>' +
+        '<td><b>' + (r.username||'—') + '</b></td>' +
+        '<td><small style="color:var(--gray3)">' + (r.ruolo||'—') + '</small></td>' +
+        '<td><span style="color:'+azioneColor+';font-weight:600;font-size:.78rem">' + (r.azione||'—') + '</span></td>' +
+        '<td style="font-size:.78rem">' + (r.sezione||'—') + '</td>' +
+        '<td style="font-size:.78rem;color:var(--gray3)">' + (r.dettaglio||'—') + '</td>' +
+        '</tr>';
+    }).join('');
+  }).catch(function(){ 
+    var tbody = document.getElementById('logBody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--red)">Errore caricamento log</td></tr>';
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
 //  REPORT & STAMPA
 // ═══════════════════════════════════════════════════════════════════
 function renderReport() {
@@ -3010,9 +3272,14 @@ function openApp(res) {
   document.getElementById('mainApp').style.display = 'flex';
   document.getElementById('userBadge').style.display = 'flex';
   document.getElementById('userName').textContent = res.nome || res.username;
-  document.getElementById('userRole').textContent = res.ruolo === 'admin' ? 'Amministratore' : 'Operatore';
+  var ruoloLabel = res.ruolo === 'admin' ? 'Amministratore' : (res.ruolo || 'Operatore');
+  document.getElementById('userRole').textContent = ruoloLabel;
   document.getElementById('userAvatar').textContent = (res.nome||res.username).charAt(0).toUpperCase();
-  loadAll().then(function(){ showPage('dashboard'); });
+  loadAll().then(function(){
+    applyPermessiMenu();
+    logAction('login', 'app', 'Accesso effettuato');
+    showPage('dashboard');
+  });
 }
 
 function doLogout() {
