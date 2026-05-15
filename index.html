@@ -9,8 +9,8 @@
 <meta name="apple-mobile-web-app-title" content="La Forza">
 <meta name="theme-color" content="#1A3A5C">
 <link rel="manifest" href="manifest.json">
-<link rel="apple-touch-icon" href="Icona%20App%20La%20Forza.png">
-<link rel="icon" type="image/png" href="Icona%20App%20La%20Forza.png">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" type="image/png" href="icon.png">
 <title>La Forza — Gestione Comunità</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
@@ -344,6 +344,107 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 /* ═══════════════════════════════════════════
    HAMBURGER
 ═══════════════════════════════════════════ */
+
+/* LOGIN */
+.login-overlay {
+  display: none; position: fixed; inset: 0;
+  background: #0d2440;
+  z-index: 9999;
+  align-items: center; justify-content: center;
+  flex-direction: column; padding: 20px;
+}
+.login-overlay.show { display: flex; }
+.login-card {
+  background: #fff; border-radius: 20px;
+  padding: 36px 32px 28px;
+  width: 100%; max-width: 380px;
+  box-shadow: 0 24px 80px rgba(0,0,0,.4);
+  text-align: center;
+}
+.login-logo-wrap { margin: 0 auto 16px; }
+.login-logo-wrap img {
+  width: 76px; height: 76px; border-radius: 16px;
+  display: block; margin: 0 auto;
+  box-shadow: 0 4px 16px rgba(26,58,92,.25);
+}
+.login-logo-fallback {
+  width: 76px; height: 76px; border-radius: 16px;
+  background: #1A3A5C; display: none;
+  align-items: center; justify-content: center;
+  font-family: 'DM Serif Display',serif;
+  font-size: 1.6rem; color: #fff; margin: 0 auto;
+}
+.login-title {
+  font-family: 'DM Serif Display',serif;
+  font-size: 1.7rem; color: #1A3A5C; margin: 0 0 3px;
+}
+.login-subtitle {
+  font-size: .78rem; color: #9E9B95;
+  margin-bottom: 22px; letter-spacing: .06em; text-transform: uppercase;
+}
+.login-divider { height: 1px; background: #E0DDD8; margin-bottom: 20px; }
+.login-field { margin-bottom: 14px; text-align: left; }
+.login-field label {
+  display: block; font-size: .74rem; font-weight: 600;
+  color: #5A5752; margin-bottom: 5px;
+  letter-spacing: .04em; text-transform: uppercase;
+}
+.login-field input {
+  width: 100%; padding: 11px 13px;
+  border: 1.5px solid #E0DDD8; border-radius: 9px;
+  font-size: 16px; font-family: inherit; color: #1C1A18;
+  outline: none; transition: all .2s;
+  box-sizing: border-box; background: #FAFAF9;
+}
+.login-field input:focus {
+  border-color: #4A90C4; background: #fff;
+  box-shadow: 0 0 0 3px rgba(74,144,196,.15);
+}
+.login-btn {
+  width: 100%; padding: 13px;
+  background: #1A3A5C; color: #fff;
+  border: none; border-radius: 10px;
+  font-size: .95rem; font-weight: 600;
+  font-family: inherit; cursor: pointer;
+  transition: all .2s; margin-top: 4px;
+}
+.login-btn:hover:not(:disabled) { background: #2C5F8A; }
+.login-btn:disabled { opacity: .6; cursor: not-allowed; }
+.login-error {
+  margin-top: 10px; font-size: .82rem; color: #C0392B;
+  background: #FEE2E2; border-radius: 7px;
+  padding: 7px 12px; display: none;
+}
+.login-error.show { display: block; }
+.login-footer-text {
+  font-size: .68rem; color: rgba(255,255,255,.35);
+  margin-top: 18px; text-align: center;
+}
+.login-footer-text a { color: rgba(255,255,255,.5); text-decoration: none; }
+.user-badge {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px;
+  border-top: 1px solid rgba(255,255,255,.1);
+}
+.user-badge .avatar {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: #4A90C4; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: .8rem; font-weight: 700; flex-shrink: 0;
+}
+.user-badge .info { flex: 1; min-width: 0; }
+.user-badge .uname {
+  font-size: .8rem; color: #fff; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.user-badge .urole { font-size: .68rem; color: rgba(255,255,255,.4); }
+.logout-btn {
+  background: none; border: none; cursor: pointer;
+  color: rgba(255,255,255,.35); font-size: .9rem;
+  padding: 4px; transition: all .2s; line-height: 1;
+}
+.logout-btn:hover { color: #C0392B; }
+
 .hamburger {
   display: none; flex-direction: column;
   justify-content: center; gap: 5px;
@@ -556,34 +657,48 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 
 <!-- LOGIN -->
 <div class="login-overlay show" id="loginOverlay">
-  <div class="login-box">
-    <img src="Icona%20App%20La%20Forza.png" class="login-logo" alt="La Forza"
-         onerror="this.style.display='none'">
+  <div class="login-card">
+
+    <div class="login-logo-wrap">
+      <img src="icon.png" alt="La Forza"
+           onerror="this.style.display='none';document.getElementById('loginLogoFallback').style.display='flex'">
+      <div class="login-logo-fallback" id="loginLogoFallback" style="display:none">LF</div>
+    </div>
+
     <div class="login-title">La Forza</div>
-    <div class="login-sub">Gestione Comunità — accedi per continuare</div>
+    <div class="login-subtitle">Gestione Comunità</div>
+    <div class="login-divider"></div>
+
     <div class="login-field">
       <label>Username</label>
-      <input type="text" id="loginUser" placeholder="es. gessica" autocomplete="username"
+      <input type="text" id="loginUser" placeholder="Inserisci username"
+             autocomplete="username" spellcheck="false"
              onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
     </div>
     <div class="login-field">
       <label>Password</label>
-      <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"
+      <input type="password" id="loginPass" placeholder="Inserisci password"
+             autocomplete="current-password"
              onkeydown="if(event.key==='Enter')doLogin()">
     </div>
+
     <button class="login-btn" onclick="doLogin()" id="loginBtn">Accedi</button>
     <div class="login-error" id="loginError"></div>
+
   </div>
-  <div class="login-footer">Realizzazione: www.apwebradiosocialtv.it</div>
+  <div class="login-footer-text">
+    Realizzazione: <a href="https://www.apwebradiosocialtv.it" target="_blank">www.apwebradiosocialtv.it</a>
+    &nbsp;|&nbsp; © La Forza 2026
+  </div>
 </div>
 
 <!-- APP -->
-<div class="app">
+<div class="app" id="mainApp" style="display:none">
 
   <!-- SIDEBAR -->
   <aside class="sidebar">
     <div class="sidebar-logo">
-      <img src="Icona%20App%20La%20Forza.png" alt="La Forza" style="width:64px;height:64px;border-radius:14px;display:block;margin:0 auto 10px;box-shadow:0 2px 8px rgba(0,0,0,0.3)">
+      <img src="icon.png" alt="La Forza" style="width:64px;height:64px;border-radius:14px;display:block;margin:0 auto 10px;box-shadow:0 2px 8px rgba(0,0,0,0.3)">
       <h1>La Forza</h1>
       <p>Gestione Comunità</p>
     </div>
@@ -2647,19 +2762,20 @@ function doLogin() {
   var errEl    = document.getElementById('loginError');
 
   if (!username || !password) {
-    errEl.textContent = 'Inserisci username e password';
-    return;
+    showErr('Inserisci username e password'); return;
   }
 
   btn.textContent = 'Accesso in corso...';
   btn.disabled = true;
-  errEl.textContent = '';
+  hideErr();
 
   callApi('login', { username: username, password: password })
     .then(function(res) {
       if (res && res.ok) {
         currentUser = res;
         document.getElementById('loginOverlay').classList.remove('show');
+        // Show main app
+        document.getElementById('mainApp').style.display = 'flex';
         // Show user badge in sidebar
         document.getElementById('userBadge').style.display = 'flex';
         document.getElementById('userName').textContent = res.nome || res.username;
@@ -2668,14 +2784,14 @@ function doLogin() {
         // Load all data
         loadAll().then(function(){ showPage('dashboard'); });
       } else {
-        errEl.textContent = (res && res.error) ? res.error : 'Username o password errati';
+        showErr((res && res.error) ? res.error : 'Username o password errati');
         btn.textContent = 'Accedi';
         btn.disabled = false;
         document.getElementById('loginPass').value = '';
       }
     })
     .catch(function(e) {
-      errEl.textContent = 'Errore di connessione. Riprova.';
+      showErr('Errore di connessione. Riprova.');
       btn.textContent = 'Accedi';
       btn.disabled = false;
     });
@@ -2684,6 +2800,7 @@ function doLogin() {
 function doLogout() {
   if (!confirm('Vuoi uscire dall\'app?')) return;
   currentUser = null;
+  document.getElementById('mainApp').style.display = 'none';
   document.getElementById('loginOverlay').classList.add('show');
   document.getElementById('loginUser').value = '';
   document.getElementById('loginPass').value = '';
