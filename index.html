@@ -554,6 +554,29 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 <!-- TOAST -->
 <div class="toast-container" id="toastContainer"></div>
 
+<!-- LOGIN -->
+<div class="login-overlay show" id="loginOverlay">
+  <div class="login-box">
+    <img src="Icona%20App%20La%20Forza.png" class="login-logo" alt="La Forza"
+         onerror="this.style.display='none'">
+    <div class="login-title">La Forza</div>
+    <div class="login-sub">Gestione Comunità — accedi per continuare</div>
+    <div class="login-field">
+      <label>Username</label>
+      <input type="text" id="loginUser" placeholder="es. gessica" autocomplete="username"
+             onkeydown="if(event.key==='Enter')document.getElementById('loginPass').focus()">
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input type="password" id="loginPass" placeholder="••••••••" autocomplete="current-password"
+             onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="login-btn" onclick="doLogin()" id="loginBtn">Accedi</button>
+    <div class="login-error" id="loginError"></div>
+  </div>
+  <div class="login-footer">Realizzazione: www.apwebradiosocialtv.it</div>
+</div>
+
 <!-- APP -->
 <div class="app">
 
@@ -606,6 +629,14 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
         <span class="icon">🖨️</span> Stampa Report
       </div>
     </nav>
+    <div class="user-badge" id="userBadge" style="display:none">
+      <div class="avatar" id="userAvatar">?</div>
+      <div class="info">
+        <div class="uname" id="userName">—</div>
+        <div class="urole" id="userRole">—</div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()" title="Esci">⏻</button>
+    </div>
     <div class="sidebar-footer">
       <div style="margin-bottom:4px">Realizzazione:</div>
       <a href="https://www.apwebradiosocialtv.it" target="_blank" style="color:rgba(255,255,255,0.6);text-decoration:none;font-size:.68rem;word-break:break-all" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,0.6)'">www.apwebradiosocialtv.it</a>
@@ -800,7 +831,8 @@ function mockData(action) {
 //  INIT
 // ═══════════════════════════════════════════════════════════════════
 window.addEventListener('load', function() {
-  loadAll().then(function() { showPage('dashboard'); });
+  // App starts with login screen — data loads after successful login
+  document.getElementById('loginUser').focus();
 });
 
 function loadAll() {
@@ -2601,6 +2633,66 @@ function initSheets() {
   }).finally(function(){ showLoader(false); });
 }
 
+
+
+// ═══════════════════════════════════════════════════════════════════
+//  AUTH — LOGIN / LOGOUT
+// ═══════════════════════════════════════════════════════════════════
+var currentUser = null;
+
+function doLogin() {
+  var username = document.getElementById('loginUser').value.trim();
+  var password = document.getElementById('loginPass').value;
+  var btn      = document.getElementById('loginBtn');
+  var errEl    = document.getElementById('loginError');
+
+  if (!username || !password) {
+    errEl.textContent = 'Inserisci username e password';
+    return;
+  }
+
+  btn.textContent = 'Accesso in corso...';
+  btn.disabled = true;
+  errEl.textContent = '';
+
+  callApi('login', { username: username, password: password })
+    .then(function(res) {
+      if (res && res.ok) {
+        currentUser = res;
+        document.getElementById('loginOverlay').classList.remove('show');
+        // Show user badge in sidebar
+        document.getElementById('userBadge').style.display = 'flex';
+        document.getElementById('userName').textContent = res.nome || res.username;
+        document.getElementById('userRole').textContent = res.ruolo === 'admin' ? 'Amministratore' : 'Operatore';
+        document.getElementById('userAvatar').textContent = (res.nome||res.username).charAt(0).toUpperCase();
+        // Load all data
+        loadAll().then(function(){ showPage('dashboard'); });
+      } else {
+        errEl.textContent = (res && res.error) ? res.error : 'Username o password errati';
+        btn.textContent = 'Accedi';
+        btn.disabled = false;
+        document.getElementById('loginPass').value = '';
+      }
+    })
+    .catch(function(e) {
+      errEl.textContent = 'Errore di connessione. Riprova.';
+      btn.textContent = 'Accedi';
+      btn.disabled = false;
+    });
+}
+
+function doLogout() {
+  if (!confirm('Vuoi uscire dall\'app?')) return;
+  currentUser = null;
+  document.getElementById('loginOverlay').classList.add('show');
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+  document.getElementById('loginBtn').textContent = 'Accedi';
+  document.getElementById('loginBtn').disabled = false;
+  document.getElementById('loginError').textContent = '';
+  document.getElementById('userBadge').style.display = 'none';
+  document.getElementById('pageContent').innerHTML = '';
+}
 
 // ═══════════════════════════════════════════════════════════════════
 //  MOBILE SIDEBAR TOGGLE
