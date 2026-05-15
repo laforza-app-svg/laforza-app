@@ -1579,7 +1579,7 @@ function renderCalendario() {
     S.settimane.forEach(function(s, i) {
       html += '<div class="week-badge" style="cursor:pointer;'+(S.currentSettimana===s.id?'':'background:var(--gray2);color:var(--text)')+'" ' +
         'onclick="selectSettimana(\''+s.id+'\')">' +
-        '<span>'+(s.label||s.id)+'</span></div>';
+        (s.label || s.id) + '</div>';
     });
     html += '</div>';
     
@@ -1601,51 +1601,57 @@ function selectSettimana(id) {
 }
 
 function renderCalGrid(settimanaId) {
-  var giorni = ['LUN','MAR','MER','GIO','VEN','SAB','DOM'];
-  var calRows = S.calendario.filter(function(r){ return r.settimana_id === settimanaId; });
+  var rows = S.calendario.filter(function(r){ return r.settimana_id === settimanaId; });
+  if (!rows || rows.length === 0) return '<p style="color:var(--gray3);padding:20px">Nessun dato per questa settimana.</p>';
+
+  // Struttura: raggruppa per zona/mansione e giorno
+  // Ogni riga = { zona, giorno, utente_nome }
+  var GIORNI_ORDER = ['LUN','MAR','MER','GIO','VEN','SAB','DOM'];
   
-  // Raggruppa per zona
-  var perZona = {};
-  calRows.forEach(function(r) {
-    if (!perZona[r.zona]) perZona[r.zona] = {};
-    perZona[r.zona][r.giorno] = r;
+  // Costruisci mappa zona -> giorno -> [utenti]
+  var zonaMap = {};
+  rows.forEach(function(r) {
+    var zona = r.zona || r.mansione_id || '—';
+    var giorno = (r.giorno||'').toString().toUpperCase();
+    // Normalizza giorno numerico -> nome
+    var giorniNum = {0:'DOM',1:'LUN',2:'MAR',3:'MER',4:'GIO',5:'VEN',6:'SAB'};
+    if (!isNaN(parseInt(giorno))) giorno = giorniNum[parseInt(giorno)] || giorno;
+    if (!zonaMap[zona]) zonaMap[zona] = {};
+    if (!zonaMap[zona][giorno]) zonaMap[zona][giorno] = [];
+    var nome = r.utente_nome || r.utente_id || '';
+    if (nome && zonaMap[zona][giorno].indexOf(nome) < 0) {
+      zonaMap[zona][giorno].push(nome);
+    }
   });
+
+  var zone = Object.keys(zonaMap).sort();
   
-  if (calRows.length === 0) {
-    return '<div class="card"><div class="card-body" style="text-align:center;padding:40px;color:var(--gray3)">Nessuna assegnazione per questa settimana</div></div>';
-  }
-  
-  var html = '<div class="card" id="calCard">' +
-    '<div class="card-header"><span class="card-title">📅 Calendario Settimana '+settimanaId+'</span>' +
-    '<button class="btn btn-sm btn-ghost no-print" onclick="showPage(\'report\')">🖨️ Stampa</button></div>' +
-    '<div class="card-body" style="padding:0;overflow-x:auto">' +
-    '<div class="cal-grid">' +
-    '<div class="cal-cell cal-head">Mansione / Zona</div>';
-  
-  giorni.forEach(function(g) {
-    html += '<div class="cal-cell cal-head">'+g+'</div>';
-  });
-  
-  Object.keys(perZona).forEach(function(zona) {
-    html += '<div class="cal-cell cal-zone">'+zona+'</div>';
-    giorni.forEach(function(g) {
-      var row = perZona[zona][g];
-      if (row) {
-        var cls = row.sostituto_id ? 'cal-name substituted' : 'cal-name';
-        var nome = row.sostituto_nome || row.utente_nome || '—';
-        var title = row.sostituto_nome ? 'Sostituto: '+row.sostituto_nome+' ('+row.motivo_sost+')' : '';
-        html += '<div class="cal-cell"><div class="'+cls+'" title="'+title+'" ' +
-          'onclick="openSostituzione(\''+row.id+'\',\''+esc(row.utente_nome)+'\',\''+g+'\')">' +
-          '<span style="font-size:.75rem">'+nome+'</span></div></div>';
+  var html = '<div class="table-wrap"><table class="cal-table">';
+  // Header
+  html += '<thead><tr><th class="cal-head" style="min-width:120px">MANSIONE / ZONA</th>';
+  GIORNI_ORDER.forEach(function(g){ html += '<th class="cal-head">' + g + '</th>'; });
+  html += '</tr></thead><tbody>';
+
+  zone.forEach(function(zona, zi) {
+    html += '<tr' + (zi%2===0 ? ' style="background:var(--gray1)"' : '') + '>';
+    html += '<td class="cal-name"><b>' + zona + '</b></td>';
+    GIORNI_ORDER.forEach(function(g) {
+      var utenti = zonaMap[zona][g] || [];
+      if (utenti.length === 0) {
+        html += '<td class="cal-cell" style="color:var(--gray2)">—</td>';
       } else {
-        html += '<div class="cal-cell"></div>';
+        html += '<td class="cal-cell">' +
+          utenti.map(function(u){ return '<div style="font-size:.72rem;padding:1px 0">'+u+'</div>'; }).join('') +
+          '</td>';
       }
     });
+    html += '</tr>';
   });
-  
-  html += '</div></div></div>';
+
+  html += '</tbody></table></div>';
   return html;
 }
+
 
 function showGeneraModal() {
   var now = new Date();
@@ -1694,6 +1700,15 @@ function generaCalendario() {
     });
     S.settimane = Object.values(settimaneMap).sort(function(a,b){
       return a.id > b.id ? 1 : -1;
+    });
+    // Update labels with dal/al from actual data
+    S.calendario.forEach(function(r){
+      if (r.settimana_id && settimaneMap[r.settimana_id] && r.dal && r.al) {
+        settimaneMap[r.settimana_id].dal = r.dal;
+        settimaneMap[r.settimana_id].al  = r.al;
+        settimaneMap[r.settimana_id].tipo = r.tipo || 'B';
+        settimaneMap[r.settimana_id].label = (r.tipo||'Sett.') + ' ' + (r.dal||'') + ' – ' + (r.al||'');
+      }
     });
     if (S.settimane.length > 0) S.currentSettimana = S.settimane[0].id;
     closeModal();
