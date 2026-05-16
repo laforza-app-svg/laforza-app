@@ -1549,10 +1549,28 @@ function filterTable(val, tableId) {
   });
 }
 
-function openModal(title, bodyHtml, footerHtml) {
+function openModal(title, bodyHtml, footerButtons) {
   document.getElementById('modalTitle').textContent = title;
   document.getElementById('modalBody').innerHTML = bodyHtml;
-  document.getElementById('modalFooter').innerHTML = footerHtml || '';
+  var footer = document.getElementById('modalFooter');
+  footer.innerHTML = '';
+  if (Array.isArray(footerButtons)) {
+    footerButtons.forEach(function(btn) {
+      var b = document.createElement('button');
+      b.className = 'btn ' + (btn.cls || 'btn-ghost');
+      b.textContent = btn.label || '';
+      if (btn.action === 'closeModal' || btn.action === 'close') {
+        b.onclick = function(){ closeModal(); };
+      } else if (typeof btn.action === 'string') {
+        b.onclick = new Function(btn.action + '()');
+      } else if (typeof btn.action === 'function') {
+        b.onclick = btn.action;
+      }
+      footer.appendChild(b);
+    });
+  } else if (typeof footerButtons === 'string') {
+    footer.innerHTML = footerButtons;
+  }
   document.getElementById('modalOverlay').classList.add('open');
 }
 
