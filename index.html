@@ -375,7 +375,7 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 .loading-card {
   background: #fff; border-radius: 16px;
   padding: 32px 40px; text-align: center;
-  min-width: 260px; max-width: 340px;
+  min-width: 280px; max-width: 360px;
   box-shadow: 0 20px 60px rgba(0,0,0,.3);
 }
 .loading-spinner {
@@ -799,6 +799,8 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
     <div class="loading-bar-wrap">
       <div class="loading-bar" id="loadingBar"></div>
     </div>
+    <div id="loadingPercent" style="font-size:1.4rem;font-weight:700;color:var(--navy);margin-top:10px;display:none">0%</div>
+    <div id="loadingStep" style="font-size:.72rem;color:var(--gray3);margin-top:4px;min-height:16px"></div>
   </div>
 </div>
 
@@ -1806,12 +1808,27 @@ function generaCalendario() {
     var mese = parseInt(meseEl.value);
     if (!anno || !mese) { toast('Inserisci anno e mese','error'); return; }
   }
-  showLoader(true, '⚡ Generazione Calendario', 'Sto calcolando le rotazioni e assegnando le mansioni... Attendere.');
+  showLoader(true, '⚡ Generazione Calendario', 'Avvio generazione...');
+  showLoaderProgress(5, 'Connessione al server...', 'Invio richiesta al database');
+
+  // Simula avanzamento mentre aspettiamo la risposta del server
+  var progTimer = null;
+  var progVal = 5;
+  progTimer = setInterval(function() {
+    progVal += Math.random() * 8;
+    if (progVal > 85) progVal = 85; // Si ferma a 85% — completa solo quando arriva risposta
+    var steps = ['Calcolo rotazioni...','Verifica fasce utenti...','Assegnazione mansioni...',
+                 'Bilanciamento fairness...','Scrittura nel database...','Quasi fatto...'];
+    var stepIdx = Math.min(Math.floor((progVal-5)/15), steps.length-1);
+    showLoaderProgress(progVal, 'Generazione in corso...', steps[stepIdx]);
+  }, 800);
+
   callApi('generaCalendarioAutomatico', { anno: anno, mese: mese, utenti: S.utenti }).then(function(result) {
-    // result = {ok:true, settimane:N, assegnazioni:N}
-    // Ricarica il calendario dal DB
+    clearInterval(progTimer);
+    showLoaderProgress(90, 'Caricamento dati...', 'Recupero calendario generato');
     return callApi('getCalendario', {});
   }).then(function(d) {
+    showLoaderProgress(100, 'Completato!', '');
     S.calendario = Array.isArray(d) ? d : [];
     // Costruisci lista settimane
     var settimaneMap = {};
@@ -1849,8 +1866,12 @@ function generaCalendario() {
     closeModal();
     renderCalendario();
     toast('Calendario generato ✓', 'success');
-  }).catch(function(e){ toast('Errore: '+e.message,'error'); })
-    .finally(function(){ showLoader(false); });
+  }).catch(function(e){
+    clearInterval(progTimer);
+    toast('Errore: '+e.message,'error');
+  }).finally(function(){
+    setTimeout(function(){ showLoader(false); }, 500);
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -3941,17 +3962,25 @@ function showLoader(show, title, msg) {
     var bar = document.getElementById('loadingBar');
     bar.classList.remove('determinate');
     bar.style.width = '';
+    var pct = document.getElementById('loadingPercent');
+    if (pct) { pct.textContent = '0%'; pct.style.display = 'none'; }
+    var stepEl = document.getElementById('loadingStep');
+    if (stepEl) stepEl.textContent = '';
     overlay.classList.add('show');
   } else {
     overlay.classList.remove('show');
   }
 }
 
-function showLoaderProgress(percent, msg) {
+function showLoaderProgress(percent, msg, step) {
   var bar = document.getElementById('loadingBar');
   bar.classList.add('determinate');
   bar.style.width = percent + '%';
   if (msg) document.getElementById('loadingMsg').textContent = msg;
+  var pct = document.getElementById('loadingPercent');
+  if (pct) { pct.textContent = Math.round(percent) + '%'; pct.style.display = 'block'; }
+  var stepEl = document.getElementById('loadingStep');
+  if (stepEl) stepEl.textContent = step || '';
 }
 function showErr(msg) {
   var el = document.getElementById('loginError');
