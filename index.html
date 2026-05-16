@@ -2500,7 +2500,8 @@ function renderTurniOperatori() {
   document.getElementById('topbarActions').innerHTML =
 '<button class="btn btn-ghost" onclick="showGeneraModal()">📅 Genera Settimane</button>' +
 '<button class="btn btn-success" onclick="showGeneraTurniModal()">✨ Genera Turni Mensili</button>' +
-'<button class="btn btn-primary" onclick="openTurnoForm()">+ Aggiungi Turno</button>';
+'<button class="btn btn-primary" onclick="openTurnoForm()">+ Aggiungi Turno</button>' +
+'<button class="btn btn-ghost" onclick="printTurniOperatori()">🖨️ Stampa</button>';
 
   var sett = S.settimane.find(function(s){ return s.id===S.currentSettimana; }) || {};
 
