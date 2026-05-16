@@ -2675,7 +2675,6 @@ function showGeneraTurniModal() {
 function doGeneraTurni() {
   var modello = getVal('gt_modello');
   var rotSeq = ['Mattina','Pomeriggio','Notte','Riposo'];
-  if (!S.settimane.length){ toast('Genera prima il calendario utenti','error'); return; }
   closeModal(); showLoader(true);
 
   var saves = [];
