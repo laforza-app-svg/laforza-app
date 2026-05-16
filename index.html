@@ -981,6 +981,8 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 // ═══════════════════════════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════════════════════════
+var currentUser = null;
+
 var S = {
   utenti: [], operatori: [], mansioni: [],
   calendario: [], debiti: [],
@@ -1434,9 +1436,87 @@ function loadAll() {
   });
 }
 
-// ═══════════════════════════════════════════════════════════════════
+// ===================================================================
+//  NAVIGATION HELPERS
+// ===================================================================
+function toggleGroup(groupId) {
+  var group = document.getElementById(groupId);
+  if (!group) return;
+  group.classList.toggle('open');
+}
+
+function openGroupForPage(page) {
+  var map = {
+    'dashboard':'group-panoramica','utenti':'group-anagrafica',
+    'operatori':'group-anagrafica','mansioni':'group-anagrafica',
+    'calendario':'group-pianificazione','turni':'group-pianificazione',
+    'presenze':'group-pianificazione','compiti':'group-pianificazione',
+    'ruoli':'group-pianificazione','sostituzioni':'group-gestione',
+    'debiti':'group-gestione','presenze_op':'group-gestione',
+    'testi':'group-gestione','permessi':'group-admin',
+    'log':'group-admin','report':'group-report',
+  };
+  var groupId = map[page];
+  if (groupId) {
+    var group = document.getElementById(groupId);
+    if (group && !group.classList.contains('open')) group.classList.add('open');
+  }
+}
+
+function toggleSidebar() {
+  var s = document.querySelector('.sidebar');
+  var o = document.getElementById('sidebarOverlay');
+  if (s) s.classList.toggle('open');
+  if (o) o.classList.toggle('show');
+}
+
+function closeSidebar() {
+  var s = document.querySelector('.sidebar');
+  var o = document.getElementById('sidebarOverlay');
+  if (s) s.classList.remove('open');
+  if (o) o.classList.remove('show');
+}
+
+function showLoader(show) {
+  var el = document.getElementById('loadingOverlay');
+  if (!el) return;
+  if (show) el.classList.add('show'); else el.classList.remove('show');
+}
+
+function toast(msg, type) {
+  var c = document.getElementById('toastContainer');
+  if (!c) return;
+  var t = document.createElement('div');
+  t.className = 'toast' + (type ? ' ' + type : '');
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(function(){ if (t.parentNode) t.parentNode.removeChild(t); }, 3500);
+}
+
+function filterTable(val, tableId) {
+  var table = document.getElementById(tableId);
+  if (!table) return;
+  var rows = table.querySelectorAll('tbody tr');
+  var v = val.toLowerCase();
+  rows.forEach(function(row){
+    row.style.display = row.textContent.toLowerCase().indexOf(v) >= 0 ? '' : 'none';
+  });
+}
+
+function openModal(title, bodyHtml, footerHtml) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = bodyHtml;
+  document.getElementById('modalFooter').innerHTML = footerHtml || '';
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+// ===================================================================
 //  NAVIGATION
-// ═══════════════════════════════════════════════════════════════════
+// ===================================================================
 function showPage(page) {
   // Verifica permessi — blocca accesso diretto
   if (page !== 'dashboard' && !canRead(page)) {
