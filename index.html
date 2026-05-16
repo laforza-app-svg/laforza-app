@@ -1112,6 +1112,8 @@ function loadUsersFromDB() {
   });
 }
 
+var proxyOk = true; // diventa false se il proxy non risponde
+
 function api(action, data) {
   // Login locale
   if (action === 'login') {
@@ -1129,17 +1131,34 @@ function api(action, data) {
     });
   }
 
-  // Tutte le altre chiamate via proxy Cloudflare (fetch normale, no CORS)
-  return fetch(PROXY_URL, {
+  // Tutte le altre chiamate via proxy Cloudflare con fallback ai mock
+  var timeout = new Promise(function(_, reject){
+    setTimeout(function(){ reject(new Error('timeout')); }, 8000);
+  });
+
+  var fetchCall = fetch(PROXY_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: action, data: data || {} })
   })
   .then(function(r){ return r.json(); })
   .then(function(r){
-    if (r && r.ok === false) throw new Error(r.error || 'Errore server');
+    if (r && r.ok === false) {
+      var mock = mockData(action);
+      if (mock !== null) return mock;
+      throw new Error(r.error || 'Errore server');
+    }
     return r && r.data !== undefined ? r.data : r;
   });
+
+  return Promise.race([fetchCall, timeout])
+    .catch(function() {
+      // Proxy non raggiungibile: usa dati mock
+      proxyOk = false;
+      var mock = mockData(action);
+      if (mock !== null) return mock;
+      return null;
+    });
 }
 
 
@@ -1388,23 +1407,25 @@ window.addEventListener('load', function() {
 
 function loadAll() {
   showLoader(true);
+  function safe(promise, fallback) {
+    return promise.catch(function(){ return fallback; });
+  }
   return Promise.all([
-    callApi('getUtenti').then(function(d){ S.utenti = d||[]; }),
-    callApi('getOperatori').then(function(d){ S.operatori = d||[]; }),
-    callApi('getMansioni').then(function(d){ S.mansioni = d||[]; }),
-    callApi('getDebiti').then(function(d){ S.debiti = d||[]; }),
-    callApi('getTurniOperatori').then(function(d){ S.turniOperatori = d||[]; }),
-    callApi('getCompitiOperatori').then(function(d){ S.compitiOperatori = d||[]; }),
-    callApi('getCompitiTipi').then(function(d){ S.compitiTipi = d||[]; }),
-    callApi('getRuoli').then(function(d){ S.ruoli = d||[]; }),
-    callApi('getPresenzeFisse').then(function(d){ S.presenzeFisse = d||[]; }),
-    callApi('getTestiOrdine').then(function(d){ S.testiOrdine = d||{}; }),
-    callApi('getRuoliPermessi').then(function(d){ S.ruoliPermessi = d||[]; }),
-    callApi('getMonteFerie',{}).then(function(d){ S.monteFerie = d||[]; }),
-    callApi('getRichiesteAssenza',{}).then(function(d){ S.richiesteAssenza = d||[]; }),
-    callApi('getNoteUtente',{}).then(function(d){ S.noteUtenti = d||[]; }),
-  ]).catch(function(e){ toast('Errore caricamento: '+e.message,'error'); })
-    .finally(function(){ showLoader(false); });
+    safe(callApi('getUtenti').then(function(d){ S.utenti = d||[]; }), null),
+    safe(callApi('getOperatori').then(function(d){ S.operatori = d||[]; }), null),
+    safe(callApi('getMansioni').then(function(d){ S.mansioni = d||[]; }), null),
+    safe(callApi('getDebiti').then(function(d){ S.debiti = d||[]; }), null),
+    safe(callApi('getTurniOperatori').then(function(d){ S.turniOperatori = d||[]; }), null),
+    safe(callApi('getCompitiOperatori').then(function(d){ S.compitiOperatori = d||[]; }), null),
+    safe(callApi('getCompitiTipi').then(function(d){ S.compitiTipi = d||[]; }), null),
+    safe(callApi('getRuoli').then(function(d){ S.ruoli = d||[]; }), null),
+    safe(callApi('getPresenzeFisse').then(function(d){ S.presenzeFisse = d||[]; }), null),
+    safe(callApi('getTestiOrdine').then(function(d){ S.testiOrdine = d||{}; }), null),
+    safe(callApi('getRuoliPermessi').then(function(d){ S.ruoliPermessi = d||[]; }), null),
+    safe(callApi('getMonteFerie',{}).then(function(d){ S.monteFerie = d||[]; }), null),
+    safe(callApi('getRichiesteAssenza',{}).then(function(d){ S.richiesteAssenza = d||[]; }), null),
+    safe(callApi('getNoteUtente',{}).then(function(d){ S.noteUtenti = d||[]; }), null),
+  ]).finally(function(){ showLoader(false); });
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -1462,7 +1483,14 @@ function showPage(page) {
 // ═══════════════════════════════════════════════════════════════════
 function renderDashboard() {
   var debitiAperti = S.debiti.filter(function(d){ return d.stato==='aperto'; }).length;
+  var offlineBanner = !proxyOk
+    ? '<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:10px 16px;margin-bottom:18px;display:flex;align-items:center;gap:10px">' +
+      '<span style="font-size:1.2rem">⚠️</span>' +
+      '<div><strong style="color:#92400E">Modalità offline</strong> — Il database non è raggiungibile. Stai vedendo dati di esempio. ' +
+      '<a href="javascript:location.reload()" style="color:#92400E;font-weight:700">Ricarica</a> per riprovare.</div></div>'
+    : '';
   document.getElementById('pageContent').innerHTML =
+    offlineBanner +
     '<div class="stats-row">' +
     statCard('👤','Utenti Attivi',S.utenti.length,'#EEF4FB') +
     statCard('🧑‍⚕️','Operatori',S.operatori.length,'#E2F4E2') +
