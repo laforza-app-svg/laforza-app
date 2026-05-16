@@ -699,6 +699,25 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 }
 
 @media print {
+  .no-print, .sidebar, .topbar, .bottom-nav,
+  .loading-overlay, .modal-overlay { display: none !important; }
+  .main { margin-left: 0 !important; }
+  body { background: white !important; }
+  #calendarPrintArea { display: block !important; }
+
+  /* A4 orizzontale */
+  body.print-a4-landscape { size: A4 landscape; }
+  /* A4 verticale */
+  body.print-a4-portrait  { size: A4 portrait; }
+  /* A3 orizzontale */
+  body.print-a3-landscape { size: A3 landscape; }
+  /* A3 verticale */
+  body.print-a3-portrait  { size: A3 portrait; }
+
+  table { width: 100% !important; font-size: .7rem !important; }
+  th, td { padding: 3px 4px !important; }
+
+@media print {
   body { background: white; font-size: 10pt; }
   .sidebar, .topbar, .no-print { display: none !important; }
   .main { margin-left: 0 !important; }
@@ -3361,9 +3380,10 @@ function renderReport() {
     '</div>' +
     '<div class="print-controls">' +
     '<span style="font-weight:600;color:var(--navy)">Report:</span>' +
-    '<button class="btn btn-primary" onclick="printCalendar()">📅 Calendario Settimanale</button>' +
+    '<button class="btn btn-primary" onclick="printCalendar()">📅 Calendario Utenti</button>' +
     '<button class="btn btn-blue" style="background:var(--sky);color:white" onclick="printOrdineServizio()">📋 Ordine di Servizio</button>' +
     '<button class="btn btn-amber" onclick="printDebiti()">⚖️ Debiti & Crediti</button>' +
+    '<button class="btn btn-success" onclick="stampaPDF()" style="background:#1A3A5C;color:white;font-size:1rem;padding:10px 20px;border-radius:8px;font-weight:700">🖨️ STAMPA / SALVA PDF</button>' +
     '</div>' +
     '</div></div>';
   
@@ -3404,6 +3424,29 @@ function selectSettimanaReport(settId) {
   // Aggiorna preview
   var preview = document.getElementById('printPreview');
   if (preview) preview.innerHTML = buildCalendarPrintArea();
+}
+
+function stampaPDF() {
+  // Applica formato pagina corretto via CSS @page
+  var fmt = currentFormat || 'a4-landscape';
+  var pageCSS = {
+    'a4-landscape': '@page { size: A4 landscape; margin: 10mm; }',
+    'a4-portrait':  '@page { size: A4 portrait;  margin: 10mm; }',
+    'a3-landscape': '@page { size: A3 landscape; margin: 10mm; }',
+    'a3-portrait':  '@page { size: A3 portrait;  margin: 10mm; }',
+  };
+  // Inserisci stile @page dinamico
+  var styleEl = document.getElementById('printPageStyle');
+  if (!styleEl) {
+    styleEl = document.createElement('style');
+    styleEl.id = 'printPageStyle';
+    document.head.appendChild(styleEl);
+  }
+  styleEl.textContent = (pageCSS[fmt] || pageCSS['a4-landscape']) +
+    ' .no-print, .sidebar, .topbar, .bottom-nav, nav, .loading-overlay { display: none !important; }' +
+    ' .main { margin-left: 0 !important; }' +
+    ' body { background: white !important; }';
+  window.print();
 }
 
 function setFormat(fmt, btn) {
@@ -3480,6 +3523,42 @@ function buildCalendarPrintArea() {
         (n.tipo==='avviso'?'⚠️':n.tipo==='punizione'?'🚫':n.tipo==='premio'?'🌟':'📝') +
         ' <b>'+(u?u.nome:n.utente_id)+'</b>: '+n.nota+'</div>';
     });
+    html += '</div>';
+  }
+
+  // ── Responsabilità settimanali ────────────────────────────────────
+  var RUOLI_NOMI2 = ['Responsabile Lavanderia','Capotavola','Responsabile Manutenzione',
+    'Responsabile Manutenzione Generale','Supervisore','Responsabile Igiene',
+    'Resp. Raccolta Differenziata','Dispensa','Turno Pane'];
+  var ruoliSett2 = {};
+  calRows.forEach(function(r) {
+    GKEYS.forEach(function(gk) {
+      var val = r[gk] || '';
+      val.split('|').forEach(function(m) {
+        m = m.trim();
+        RUOLI_NOMI2.forEach(function(rn) {
+          if (m === rn) {
+            if (!ruoliSett2[rn]) ruoliSett2[rn] = [];
+            var nomeCompleto = (r.utente_nome||'').toUpperCase();
+            if (nomeCompleto && ruoliSett2[rn].indexOf(nomeCompleto) < 0) ruoliSett2[rn].push(nomeCompleto);
+          }
+        });
+      });
+    });
+  });
+  var ruoliKeys2 = Object.keys(ruoliSett2);
+  if (ruoliKeys2.length > 0) {
+    html += '<div style="margin-top:16px;padding:12px 16px;border:2px solid #333;font-size:.85rem;line-height:1.8">';
+    ruoliKeys2.forEach(function(ruolo) {
+      html += '<div style="font-weight:700;text-decoration:underline">' +
+        ruolo.toUpperCase()+': <span style="background:yellow;padding:1px 6px">'+
+        ruoliSett2[ruolo].join('-')+'</span></div>';
+    });
+    if (S.testiOrdine && S.testiOrdine.chiusura_extra && S.testiOrdine.chiusura_extra.trim()) {
+      html += '<div style="margin-top:8px;padding-top:6px;border-top:1px solid #ccc;font-weight:700">'+
+        S.testiOrdine.chiusura_extra.toUpperCase()+'</div>';
+    }
+    html += '<div style="text-align:right;margin-top:12px;font-weight:700;font-style:italic">COMUNITA\' "LA FORZA"</div>';
     html += '</div>';
   }
 
