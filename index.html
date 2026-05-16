@@ -357,65 +357,6 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 .format-btn.active { background: var(--navy); color: var(--white); border-color: var(--navy); }
 
 
-
-/* ═══════════════════════════════════════════
-   LOADING OVERLAY
-═══════════════════════════════════════════ */
-.loading-overlay {
-  display: none; position: fixed; inset: 0;
-  background: rgba(10,25,47,.75);
-  z-index: 99999;
-  align-items: center; justify-content: center;
-  flex-direction: column; gap: 20px;
-  -webkit-backdrop-filter: blur(3px);
-  backdrop-filter: blur(3px);
-}
-.loading-overlay.show { display: flex; }
-
-.loading-card {
-  background: #fff; border-radius: 16px;
-  padding: 32px 40px; text-align: center;
-  min-width: 280px; max-width: 360px;
-  box-shadow: 0 20px 60px rgba(0,0,0,.3);
-}
-.loading-spinner {
-  width: 52px; height: 52px;
-  border: 4px solid var(--gray2);
-  border-top-color: var(--navy);
-  border-radius: 50%;
-  animation: spin .8s linear infinite;
-  margin: 0 auto 16px;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.loading-title {
-  font-family: 'DM Serif Display', serif;
-  font-size: 1.1rem; color: var(--navy);
-  margin-bottom: 6px;
-}
-.loading-msg {
-  font-size: .85rem; color: var(--gray3);
-  margin-bottom: 16px; min-height: 20px;
-}
-.loading-bar-wrap {
-  width: 100%; height: 6px;
-  background: var(--gray2); border-radius: 10px;
-  overflow: hidden;
-}
-.loading-bar {
-  height: 100%; width: 0%;
-  background: linear-gradient(90deg, var(--navy), var(--sky));
-  border-radius: 10px;
-  transition: width .4s ease;
-  animation: indeterminate 1.4s ease infinite;
-}
-@keyframes indeterminate {
-  0%   { width: 0%;   margin-left: 0%; }
-  50%  { width: 60%;  margin-left: 20%; }
-  100% { width: 0%;   margin-left: 100%; }
-}
-.loading-bar.determinate { animation: none; }
-
 /* ═══════════════════════════════════════════
    HAMBURGER
 ═══════════════════════════════════════════ */
@@ -699,25 +640,6 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 }
 
 @media print {
-  .no-print, .sidebar, .topbar, .bottom-nav,
-  .loading-overlay, .modal-overlay { display: none !important; }
-  .main { margin-left: 0 !important; }
-  body { background: white !important; }
-  #calendarPrintArea { display: block !important; }
-
-  /* A4 orizzontale */
-  body.print-a4-landscape { size: A4 landscape; }
-  /* A4 verticale */
-  body.print-a4-portrait  { size: A4 portrait; }
-  /* A3 orizzontale */
-  body.print-a3-landscape { size: A3 landscape; }
-  /* A3 verticale */
-  body.print-a3-portrait  { size: A3 portrait; }
-
-  table { width: 100% !important; font-size: .7rem !important; }
-  th, td { padding: 3px 4px !important; }
-
-@media print {
   body { background: white; font-size: 10pt; }
   .sidebar, .topbar, .no-print { display: none !important; }
   .main { margin-left: 0 !important; }
@@ -981,8 +903,6 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 // ═══════════════════════════════════════════════════════════════════
 //  STATE
 // ═══════════════════════════════════════════════════════════════════
-var currentUser = null;
-
 var S = {
   utenti: [], operatori: [], mansioni: [],
   calendario: [], debiti: [],
@@ -1009,92 +929,6 @@ var LOCAL_USERS = [
 ];
 var usersLoaded = false;
 
-
-function showLoaderProgress(percent, msg, step) {
-  var bar = document.getElementById('loadingBar');
-  if (bar) { bar.classList.add('determinate'); bar.style.width = percent + '%'; }
-  if (msg) { var el = document.getElementById('loadingMsg'); if (el) el.textContent = msg; }
-  var pct = document.getElementById('loadingPercent');
-  if (pct) { pct.textContent = Math.round(percent) + '%'; pct.style.display = 'block'; }
-  var stepEl = document.getElementById('loadingStep');
-  if (stepEl) stepEl.textContent = step || '';
-}
-
-function showErr(msg) {
-  var el = document.getElementById('loginError');
-  if (el) { el.textContent = msg; el.classList.add('show'); }
-}
-function hideErr() {
-  var el = document.getElementById('loginError');
-  if (el) el.classList.remove('show');
-}
-
-function doLogin() {
-  var username = document.getElementById('loginUser').value.trim();
-  var password = document.getElementById('loginPass').value;
-  var btn      = document.getElementById('loginBtn');
-  if (!username || !password) { showErr('Inserisci username e password'); return; }
-  btn.textContent = 'Accesso in corso...';
-  btn.disabled = true;
-  hideErr();
-  callApi('login', { username: username, password: password })
-    .then(function(res) {
-      if (res && res.ok) {
-        currentUser = res;
-        var remember = document.getElementById('loginRemember');
-        if (remember && remember.checked) {
-          try {
-            localStorage.setItem('lf_session', JSON.stringify({
-              username: res.username, nome: res.nome, ruolo: res.ruolo, ts: Date.now()
-            }));
-          } catch(e) {}
-        }
-        openApp(res);
-      } else {
-        showErr((res && res.error) ? res.error : 'Username o password errati');
-        btn.textContent = 'Accedi';
-        btn.disabled = false;
-        document.getElementById('loginPass').value = '';
-      }
-    })
-    .catch(function(e) {
-      showErr('Errore di connessione. Riprova.');
-      btn.textContent = 'Accedi';
-      btn.disabled = false;
-    });
-}
-
-function openApp(res) {
-  document.getElementById('loginOverlay').classList.remove('show');
-  document.getElementById('mainApp').style.display = 'flex';
-  document.getElementById('userBadge').style.display = 'flex';
-  document.getElementById('userName').textContent = res.nome || res.username;
-  var ruoloLabel = res.ruolo === 'admin' ? 'Amministratore' : (res.ruolo || 'Operatore');
-  document.getElementById('userRole').textContent = ruoloLabel;
-  document.getElementById('userAvatar').textContent = (res.nome||res.username).charAt(0).toUpperCase();
-  loadAll().then(function(){
-    applyPermessiMenu();
-    logAction('login', 'app', 'Accesso effettuato');
-    showPage('dashboard');
-  });
-}
-
-function doLogout() {
-  if (!confirm('Vuoi uscire dall\'app?')) return;
-  currentUser = null;
-  try { localStorage.removeItem('lf_session'); } catch(e) {}
-  document.getElementById('mainApp').style.display = 'none';
-  document.getElementById('loginOverlay').classList.add('show');
-  document.getElementById('loginUser').value = '';
-  document.getElementById('loginPass').value = '';
-  document.getElementById('loginBtn').textContent = 'Accedi';
-  document.getElementById('loginBtn').disabled = false;
-  hideErr();
-  document.getElementById('userBadge').style.display = 'none';
-  document.getElementById('pageContent').innerHTML = '';
-}
-
-
 function loadUsersFromDB() {
   return new Promise(function(resolve) {
     if (usersLoaded) { resolve(); return; }
@@ -1114,8 +948,6 @@ function loadUsersFromDB() {
   });
 }
 
-var proxyOk = true; // diventa false se il proxy non risponde
-
 function api(action, data) {
   // Login locale
   if (action === 'login') {
@@ -1133,34 +965,17 @@ function api(action, data) {
     });
   }
 
-  // Tutte le altre chiamate via proxy Cloudflare con fallback ai mock
-  var timeout = new Promise(function(_, reject){
-    setTimeout(function(){ reject(new Error('timeout')); }, 8000);
-  });
-
-  var fetchCall = fetch(PROXY_URL, {
+  // Tutte le altre chiamate via proxy Cloudflare (fetch normale, no CORS)
+  return fetch(PROXY_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: action, data: data || {} })
   })
   .then(function(r){ return r.json(); })
   .then(function(r){
-    if (r && r.ok === false) {
-      var mock = mockData(action);
-      if (mock !== null) return mock;
-      throw new Error(r.error || 'Errore server');
-    }
+    if (r && r.ok === false) throw new Error(r.error || 'Errore server');
     return r && r.data !== undefined ? r.data : r;
   });
-
-  return Promise.race([fetchCall, timeout])
-    .catch(function() {
-      // Proxy non raggiungibile: usa dati mock
-      proxyOk = false;
-      var mock = mockData(action);
-      if (mock !== null) return mock;
-      return null;
-    });
 }
 
 
@@ -1409,114 +1224,28 @@ window.addEventListener('load', function() {
 
 function loadAll() {
   showLoader(true);
-  function sc(action, key, def, params) {
-    return callApi(action, params||{}).then(function(d){
-      S[key] = Array.isArray(d) ? d : (d && typeof d === 'object' && !Array.isArray(d) ? d : def);
-    }).catch(function(){ S[key] = def; });
-  }
   return Promise.all([
-    sc('getUtenti',           'utenti',           []),
-    sc('getOperatori',        'operatori',        []),
-    sc('getMansioni',         'mansioni',         []),
-    sc('getDebiti',           'debiti',           []),
-    sc('getTurniOperatori',   'turniOperatori',   []),
-    sc('getCompitiOperatori', 'compitiOperatori', []),
-    sc('getCompitiTipi',      'compitiTipi',      []),
-    sc('getRuoli',            'ruoli',            []),
-    sc('getPresenzeFisse',    'presenzeFisse',    []),
-    sc('getTestiOrdine',      'testiOrdine',      {}),
-    sc('getRuoliPermessi',    'ruoliPermessi',    []),
-    sc('getMonteFerie',       'monteFerie',       [], {}),
-    sc('getRichiesteAssenza', 'richiesteAssenza', [], {}),
-    sc('getNoteUtente',       'noteUtenti',       [], {}),
-  ]).then(function(){
-    showLoader(false);
-  }).catch(function(){
-    showLoader(false);
-  });
+    callApi('getUtenti').then(function(d){ S.utenti = d||[]; }),
+    callApi('getOperatori').then(function(d){ S.operatori = d||[]; }),
+    callApi('getMansioni').then(function(d){ S.mansioni = d||[]; }),
+    callApi('getDebiti').then(function(d){ S.debiti = d||[]; }),
+    callApi('getTurniOperatori').then(function(d){ S.turniOperatori = d||[]; }),
+    callApi('getCompitiOperatori').then(function(d){ S.compitiOperatori = d||[]; }),
+    callApi('getCompitiTipi').then(function(d){ S.compitiTipi = d||[]; }),
+    callApi('getRuoli').then(function(d){ S.ruoli = d||[]; }),
+    callApi('getPresenzeFisse').then(function(d){ S.presenzeFisse = d||[]; }),
+    callApi('getTestiOrdine').then(function(d){ S.testiOrdine = d||{}; }),
+    callApi('getRuoliPermessi').then(function(d){ S.ruoliPermessi = d||[]; }),
+    callApi('getMonteFerie',{}).then(function(d){ S.monteFerie = d||[]; }),
+    callApi('getRichiesteAssenza',{}).then(function(d){ S.richiesteAssenza = d||[]; }),
+    callApi('getNoteUtente',{}).then(function(d){ S.noteUtenti = d||[]; }),
+  ]).catch(function(e){ toast('Errore caricamento: '+e.message,'error'); })
+    .finally(function(){ showLoader(false); });
 }
 
-// ===================================================================
-//  NAVIGATION HELPERS
-// ===================================================================
-function toggleGroup(groupId) {
-  var group = document.getElementById(groupId);
-  if (!group) return;
-  group.classList.toggle('open');
-}
-
-function openGroupForPage(page) {
-  var map = {
-    'dashboard':'group-panoramica','utenti':'group-anagrafica',
-    'operatori':'group-anagrafica','mansioni':'group-anagrafica',
-    'calendario':'group-pianificazione','turni':'group-pianificazione',
-    'presenze':'group-pianificazione','compiti':'group-pianificazione',
-    'ruoli':'group-pianificazione','sostituzioni':'group-gestione',
-    'debiti':'group-gestione','presenze_op':'group-gestione',
-    'testi':'group-gestione','permessi':'group-admin',
-    'log':'group-admin','report':'group-report',
-  };
-  var groupId = map[page];
-  if (groupId) {
-    var group = document.getElementById(groupId);
-    if (group && !group.classList.contains('open')) group.classList.add('open');
-  }
-}
-
-function toggleSidebar() {
-  var s = document.querySelector('.sidebar');
-  var o = document.getElementById('sidebarOverlay');
-  if (s) s.classList.toggle('open');
-  if (o) o.classList.toggle('show');
-}
-
-function closeSidebar() {
-  var s = document.querySelector('.sidebar');
-  var o = document.getElementById('sidebarOverlay');
-  if (s) s.classList.remove('open');
-  if (o) o.classList.remove('show');
-}
-
-function showLoader(show) {
-  var el = document.getElementById('loadingOverlay');
-  if (!el) return;
-  if (show) el.classList.add('show'); else el.classList.remove('show');
-}
-
-function toast(msg, type) {
-  var c = document.getElementById('toastContainer');
-  if (!c) return;
-  var t = document.createElement('div');
-  t.className = 'toast' + (type ? ' ' + type : '');
-  t.textContent = msg;
-  c.appendChild(t);
-  setTimeout(function(){ if (t.parentNode) t.parentNode.removeChild(t); }, 3500);
-}
-
-function filterTable(val, tableId) {
-  var table = document.getElementById(tableId);
-  if (!table) return;
-  var rows = table.querySelectorAll('tbody tr');
-  var v = val.toLowerCase();
-  rows.forEach(function(row){
-    row.style.display = row.textContent.toLowerCase().indexOf(v) >= 0 ? '' : 'none';
-  });
-}
-
-function openModal(title, bodyHtml, footerHtml) {
-  document.getElementById('modalTitle').textContent = title;
-  document.getElementById('modalBody').innerHTML = bodyHtml;
-  document.getElementById('modalFooter').innerHTML = footerHtml || '';
-  document.getElementById('modalOverlay').classList.add('open');
-}
-
-function closeModal() {
-  document.getElementById('modalOverlay').classList.remove('open');
-}
-
-// ===================================================================
+// ═══════════════════════════════════════════════════════════════════
 //  NAVIGATION
-// ===================================================================
+// ═══════════════════════════════════════════════════════════════════
 function showPage(page) {
   // Verifica permessi — blocca accesso diretto
   if (page !== 'dashboard' && !canRead(page)) {
@@ -1569,14 +1298,7 @@ function showPage(page) {
 // ═══════════════════════════════════════════════════════════════════
 function renderDashboard() {
   var debitiAperti = S.debiti.filter(function(d){ return d.stato==='aperto'; }).length;
-  var offlineBanner = !proxyOk
-    ? '<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:10px 16px;margin-bottom:18px;display:flex;align-items:center;gap:10px">' +
-      '<span style="font-size:1.2rem">⚠️</span>' +
-      '<div><strong style="color:#92400E">Modalità offline</strong> — Il database non è raggiungibile. Stai vedendo dati di esempio. ' +
-      '<a href="javascript:location.reload()" style="color:#92400E;font-weight:700">Ricarica</a> per riprovare.</div></div>'
-    : '';
   document.getElementById('pageContent').innerHTML =
-    offlineBanner +
     '<div class="stats-row">' +
     statCard('👤','Utenti Attivi',S.utenti.length,'#EEF4FB') +
     statCard('🧑‍⚕️','Operatori',S.operatori.length,'#E2F4E2') +
@@ -1994,27 +1716,12 @@ function generaCalendario() {
     var mese = parseInt(meseEl.value);
     if (!anno || !mese) { toast('Inserisci anno e mese','error'); return; }
   }
-  showLoader(true, '⚡ Generazione Calendario', 'Avvio generazione...');
-  showLoaderProgress(5, 'Connessione al server...', 'Invio richiesta al database');
-
-  // Simula avanzamento mentre aspettiamo la risposta del server
-  var progTimer = null;
-  var progVal = 5;
-  progTimer = setInterval(function() {
-    progVal += Math.random() * 8;
-    if (progVal > 85) progVal = 85; // Si ferma a 85% — completa solo quando arriva risposta
-    var steps = ['Calcolo rotazioni...','Verifica fasce utenti...','Assegnazione mansioni...',
-                 'Bilanciamento fairness...','Scrittura nel database...','Quasi fatto...'];
-    var stepIdx = Math.min(Math.floor((progVal-5)/15), steps.length-1);
-    showLoaderProgress(progVal, 'Generazione in corso...', steps[stepIdx]);
-  }, 800);
-
+  showLoader(true);
   callApi('generaCalendarioAutomatico', { anno: anno, mese: mese, utenti: S.utenti }).then(function(result) {
-    clearInterval(progTimer);
-    showLoaderProgress(90, 'Caricamento dati...', 'Recupero calendario generato');
+    // result = {ok:true, settimane:N, assegnazioni:N}
+    // Ricarica il calendario dal DB
     return callApi('getCalendario', {});
   }).then(function(d) {
-    showLoaderProgress(100, 'Completato!', '');
     S.calendario = Array.isArray(d) ? d : [];
     // Costruisci lista settimane
     var settimaneMap = {};
@@ -2052,12 +1759,8 @@ function generaCalendario() {
     closeModal();
     renderCalendario();
     toast('Calendario generato ✓', 'success');
-  }).catch(function(e){
-    clearInterval(progTimer);
-    toast('Errore: '+e.message,'error');
-  }).finally(function(){
-    setTimeout(function(){ showLoader(false); }, 500);
-  });
+  }).catch(function(e){ toast('Errore: '+e.message,'error'); })
+    .finally(function(){ showLoader(false); });
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2706,7 +2409,7 @@ function printTurniOperatori() {
   });
   html += '</tbody></table>';
   var w = window.open('','_blank');
-  w.document.write('<!DOCTYPE html><html><head><title>Turni Operatori</title></head><body>'+html+'</'+'script></body></html>');
+  w.document.write('<!DOCTYPE html><html><head><title>Turni Operatori</title></head><body>'+html+'</body></html>');
   w.document.close(); w.focus();
   setTimeout(function(){ w.print(); }, 600);
 }
@@ -3366,7 +3069,7 @@ function escHtml(s) {
 }
 
 function saveAllTesti() {
-  showLoader(true, '💾 Salvataggio', 'Sto salvando testi e note nel database...');
+  showLoader(true);
   var saves = [
     callApi('saveTestiOrdine', {chiave:'testo_intro',    valore: document.getElementById('testo_intro').value}),
     callApi('saveTestiOrdine', {chiave:'note_operative', valore: document.getElementById('note_operative').value}),
@@ -3467,7 +3170,7 @@ function savePermessi() {
   if (!canWrite('permessi') && currentUser && currentUser.ruolo !== 'admin') {
     toast('Non hai i permessi per modificare i ruoli', 'error'); return;
   }
-  showLoader(true, '🔐 Salvataggio Permessi', 'Aggiornamento permessi in corso...');
+  showLoader(true);
   var saves = [];
   RUOLI_LISTA.filter(function(r){ return r !== 'admin'; }).forEach(function(ruolo) {
     Object.keys(SEZIONI_LABELS).forEach(function(sez) {
@@ -3553,30 +3256,6 @@ function loadLog() {
 //  REPORT & STAMPA
 // ═══════════════════════════════════════════════════════════════════
 function renderReport() {
-  // Auto-carica calendario se non ancora caricato
-  if (S.calendario.length === 0 && S.settimane.length === 0) {
-    showLoader(true, '📥 Caricamento', 'Carico il calendario dal database...');
-    callApi('getCalendario', {}).then(function(d) {
-      S.calendario = Array.isArray(d) ? d : [];
-      // Ricostruisci settimane
-      var settimaneMap = {};
-      S.calendario.forEach(function(r) {
-        if (!r.settimana_id) return;
-        if (!settimaneMap[r.settimana_id]) {
-          settimaneMap[r.settimana_id] = {id:r.settimana_id, tipo:r.tipo||'B', dal:r.dal||'', al:r.al||'', label:(r.tipo||'Sett.')+' '+(r.dal||'')+' – '+(r.al||'')};
-        }
-      });
-      S.settimane = Object.values(settimaneMap).sort(function(a,b){ return a.id>b.id?1:-1; });
-      if (!S.currentSettimana && S.settimane.length > 0) S.currentSettimana = S.settimane[0].id;
-      showLoader(false);
-      renderReport();
-    }).catch(function(){ showLoader(false); renderReport(); });
-    return;
-  }
-  // Auto-seleziona prima settimana se non selezionata
-  if (!S.currentSettimana && S.settimane.length > 0) {
-    S.currentSettimana = S.settimane[0].id;
-  }
   var html = '<div class="card no-print"><div class="card-header"><span class="card-title">🖨️ Opzioni di Stampa</span></div>' +
     '<div class="card-body">' +
     '<div class="print-controls">' +
@@ -3587,27 +3266,12 @@ function renderReport() {
     '</div>' +
     '<div class="print-controls">' +
     '<span style="font-weight:600;color:var(--navy)">Report:</span>' +
-    '<button class="btn btn-primary" onclick="printCalendar()">📅 Calendario Utenti</button>' +
+    '<button class="btn btn-primary" onclick="printCalendar()">📅 Calendario Settimanale</button>' +
     '<button class="btn btn-blue" style="background:var(--sky);color:white" onclick="printOrdineServizio()">📋 Ordine di Servizio</button>' +
     '<button class="btn btn-amber" onclick="printDebiti()">⚖️ Debiti & Crediti</button>' +
-    '<button class="btn btn-success" onclick="stampaPDF()" style="background:#1A3A5C;color:white;font-size:1rem;padding:10px 20px;border-radius:8px;font-weight:700">🖨️ STAMPA / SALVA PDF</button>' +
     '</div>' +
     '</div></div>';
   
-  // Selettore settimana nel report
-  if (S.settimane.length > 0) {
-    html += '<div class="card no-print"><div class="card-body" style="padding:12px 16px">' +
-      '<span style="font-weight:600;color:var(--navy);margin-right:10px">Settimana:</span>' +
-      S.settimane.map(function(s) {
-        return '<button onclick="selectSettimanaReport(\''+s.id+'\')" ' +
-          'id="rsett_'+s.id+'" ' +
-          'style="margin:2px 4px;padding:5px 12px;border-radius:20px;border:1.5px solid var(--navy);cursor:pointer;font-size:.8rem;' +
-          (s.id===S.currentSettimana?'background:var(--navy);color:white':'background:white;color:var(--navy)') +
-          '">'+(s.tipo||s.id)+' '+(s.dal||'')+'</button>';
-      }).join('') +
-      '</div></div>';
-  }
-
   // Anteprima calendario
   if (S.currentSettimana && S.calendario.length > 0) {
     html += '<div id="printPreview">' + buildCalendarPrintArea() + '</div>';
@@ -3620,42 +3284,6 @@ function renderReport() {
 }
 
 var currentFormat = 'a4-landscape';
-function selectSettimanaReport(settId) {
-  S.currentSettimana = settId;
-  // Aggiorna pulsanti
-  document.querySelectorAll('[id^="rsett_"]').forEach(function(b){
-    var isActive = b.id === 'rsett_'+settId;
-    b.style.background = isActive ? 'var(--navy)' : 'white';
-    b.style.color = isActive ? 'white' : 'var(--navy)';
-  });
-  // Aggiorna preview
-  var preview = document.getElementById('printPreview');
-  if (preview) preview.innerHTML = buildCalendarPrintArea();
-}
-
-function stampaPDF() {
-  // Applica formato pagina corretto via CSS @page
-  var fmt = currentFormat || 'a4-landscape';
-  var pageCSS = {
-    'a4-landscape': '@page { size: A4 landscape; margin: 10mm; }',
-    'a4-portrait':  '@page { size: A4 portrait;  margin: 10mm; }',
-    'a3-landscape': '@page { size: A3 landscape; margin: 10mm; }',
-    'a3-portrait':  '@page { size: A3 portrait;  margin: 10mm; }',
-  };
-  // Inserisci stile @page dinamico
-  var styleEl = document.getElementById('printPageStyle');
-  if (!styleEl) {
-    styleEl = document.createElement('style');
-    styleEl.id = 'printPageStyle';
-    document.head.appendChild(styleEl);
-  }
-  styleEl.textContent = (pageCSS[fmt] || pageCSS['a4-landscape']) +
-    ' .no-print, .sidebar, .topbar, .bottom-nav, nav, .loading-overlay { display: none !important; }' +
-    ' .main { margin-left: 0 !important; }' +
-    ' body { background: white !important; }';
-  window.print();
-}
-
 function setFormat(fmt, btn) {
   currentFormat = fmt;
   document.querySelectorAll('.format-btn').forEach(function(b){ b.classList.remove('active'); });
@@ -3663,139 +3291,570 @@ function setFormat(fmt, btn) {
 }
 
 function buildCalendarPrintArea() {
-  var sett    = S.settimane.find(function(s){ return s.id===S.currentSettimana; }) || {};
-  var GIORNI  = ['LUN','MAR','MER','GIO','VEN','SAB','DOM'];
-  var GKEYS   = ['lun','mar','mer','gio','ven','sab','dom'];
-  var GLABELS = ['Lunedi','Martedi','Mercoledi','Giovedi','Venerdi','Sabato','Domenica'];
+  var sett = S.settimane.find(function(s){ return s.id===S.currentSettimana; }) || {};
+  var giorni = ['LUN','MAR','MER','GIO','VEN','SAB','DOM'];
   var calRows = S.calendario.filter(function(r){ return r.settimana_id===S.currentSettimana; });
-
-  if (calRows.length === 0) return '<p style="color:#999;padding:20px;text-align:center">Nessun dato per questa settimana.</p>';
-
-  function getColore(m) {
-    if (!m) return {bg:'#F9FAFB',fg:'#374151'};
-    if (m.indexOf('Sala')>=0||m.indexOf('Ufficio')>=0) return {bg:'#DBEAFE',fg:'#1E40AF'};
-    if (m.indexOf('Cucina')>=0||m.indexOf('Pane')>=0||m.indexOf('Pranzo')>=0) return {bg:'#FEF3C7',fg:'#92400E'};
-    if (m.indexOf('Lavand')>=0||m.indexOf('Lav.')>=0) return {bg:'#D1FAE5',fg:'#065F46'};
-    if (m.indexOf('App')>=0||m.indexOf('Mensa')>=0||m.indexOf('Sparecchio')>=0) return {bg:'#EDE9FE',fg:'#5B21B6'};
-    if (m.indexOf('Supervisore')>=0||m.indexOf('Capotavola')>=0||m.indexOf('Responsabile')>=0||m.indexOf('Differenziata')>=0) return {bg:'#FEE2E2',fg:'#C0392B'};
-    if (m.indexOf('Dispensa')>=0) return {bg:'#FCE7F3',fg:'#9D174D'};
-    return {bg:'#F3F4F6',fg:'#374151'};
-  }
-
-  var dalParts = (sett.dal||'01/01/2026').split('/');
-  var dataLun = dalParts.length===3 ? new Date(dalParts[2],dalParts[1]-1,parseInt(dalParts[0])) : new Date();
-  var dateGiorni = [];
-  for (var i=0;i<7;i++) {
-    var d=new Date(dataLun); d.setDate(d.getDate()+i);
-    dateGiorni.push(('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2));
-  }
-
-  var html = '<div id="calendarPrintArea">';
-
-  // Intestazione
-  html += '<div style="border-bottom:3px solid #1A3A5C;padding-bottom:8px;margin-bottom:10px">' +
-    '<h2 style="font-family:DM Serif Display,serif;color:#1A3A5C;margin:0 0 3px;font-size:1.2rem">' +
-    'COMUNITA\' LA FORZA — CALENDARIO SETTIMANALE UTENTI</h2>' +
-    '<p style="color:#666;margin:0;font-size:.82rem">Settimana '+(sett.tipo||'')+
-    ' &nbsp;|&nbsp; '+(sett.dal||'')+' – '+(sett.al||'')+
-    ' &nbsp;|&nbsp; Generato il '+new Date().toLocaleDateString('it-IT')+'</p></div>';
-
-  // Legenda
-  var legenda = [{l:'Sala/Relax',bg:'#DBEAFE',fg:'#1E40AF'},{l:'Cucina/Pane',bg:'#FEF3C7',fg:'#92400E'},
-    {l:'Lavanderia',bg:'#D1FAE5',fg:'#065F46'},{l:'Mensa',bg:'#EDE9FE',fg:'#5B21B6'},
-    {l:'Responsabilita',bg:'#FEE2E2',fg:'#C0392B'},{l:'Manutenzione',bg:'#F3F4F6',fg:'#374151'}];
-  html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;font-size:.68rem">';
-  legenda.forEach(function(l){ html += '<span style="background:'+l.bg+';color:'+l.fg+';padding:2px 7px;border-radius:3px;font-weight:600">'+l.l+'</span>'; });
-  html += '</div>';
-
-  // Tabella per utente
-  html += '<table style="width:100%;border-collapse:collapse;font-size:.72rem">';
-  html += '<thead><tr style="background:#1A3A5C;color:white">';
-  html += '<th style="padding:5px 7px;text-align:left;min-width:120px;border:1px solid #1A3A5C">Nominativo</th>';
-  GLABELS.forEach(function(g,i){
-    html += '<th style="padding:5px 4px;text-align:center;border:1px solid #1A3A5C">'+g+'<br><span style="font-size:.6rem;opacity:.7">'+dateGiorni[i]+'</span></th>';
-  });
-  html += '</tr></thead><tbody>';
-
-  var fasciaColors = {'F1':'#FFF8E7','F2':'#EEF4FB','F3':'#E2F4E2'};
-  var fasciaStars  = {'F1':'★','F2':'★★★','F3':'★★★★★'};
-
-  calRows.forEach(function(r,ri) {
-    var u = S.utenti.find(function(x){ return x.id===r.utente_id; }) || {};
-    var fascia = u.fascia || 'F1';
-    html += '<tr style="'+(ri%2===0?'background:#fafafa':'')+'">';
-    html += '<td style="padding:4px 6px;border:0.5px solid #ddd;background:'+(fasciaColors[fascia]||'#fff')+';vertical-align:middle">';
-    html += '<div style="font-weight:700;font-size:.78rem">'+(r.utente_nome||r.utente_id||'')+'</div>';
-    html += '<div style="font-size:.6rem;color:#888">'+fascia+' '+(fasciaStars[fascia]||'')+'</div></td>';
-    GKEYS.forEach(function(gk) {
-      var val = r[gk] || '';
-      var mansioni = val.split('|').filter(function(m){ return m&&m.trim(); });
-      html += '<td style="padding:2px 3px;border:0.5px solid #ddd;vertical-align:top;text-align:center">';
-      if (!mansioni.length) {
-        html += '<span style="color:#ddd;font-size:.65rem">Free</span>';
-      } else {
-        mansioni.forEach(function(m) {
-          m = m.trim(); if (!m) return;
-          var col = getColore(m);
-          var label = m.replace('Apparecchio-Sparecchio / Pulizia Sala Mensa','App./Sparecchio')
-            .replace('Sala Terapeutico-Riabilitativa / Sala Relax','Sala Relax')
-            .replace('Turno Lavanderia Mattina','Lav. Mattina')
-            .replace('Turno Lavanderia Pomeriggio','Lav. Pomerigg.')
-            .replace('Pranzo / Cena / Colazione / Merende','Pranzo/Cena')
-            .replace('Atrio Esterno / Entrata / Cortile','Atrio')
-            .replace('Campo Pallavolo / Scala Antincendio','Campo/Scala')
-            .replace('Responsabile Manutenzione Generale','Resp.Manut.')
-            .replace('Responsabile Lavanderia','Resp.Lavand.')
-            .replace('Responsabile Igiene','Resp.Igiene')
-            .replace('Resp. Raccolta Differenziata','Differenz.');
-          html += '<div style="background:'+col.bg+';color:'+col.fg+';border-radius:3px;padding:1px 3px;margin:1px 0;font-size:.63rem;font-weight:600">'+label+'</div>';
-        });
-      }
-      html += '</td>';
-    });
-    html += '</tr>';
-  });
-  html += '</tbody></table>';
-
-  // Responsabilità settimanali
-  var RUOLI_NOMI2 = ['Responsabile Lavanderia','Capotavola','Responsabile Manutenzione Generale',
-    'Supervisore','Responsabile Igiene','Resp. Raccolta Differenziata','Dispensa','Turno Pane'];
-  var ruoliSett2 = {};
+  
+  var perZona = {};
   calRows.forEach(function(r) {
-    GKEYS.forEach(function(gk) {
-      (r[gk]||'').split('|').forEach(function(m) {
-        m = m.trim();
-        RUOLI_NOMI2.forEach(function(rn) {
-          if (m===rn) {
-            if (!ruoliSett2[rn]) ruoliSett2[rn] = [];
-            var nome = (r.utente_nome||'').toUpperCase();
-            if (nome && ruoliSett2[rn].indexOf(nome)<0) ruoliSett2[rn].push(nome);
-          }
-        });
-      });
+    if (!perZona[r.zona]) perZona[r.zona] = {};
+    perZona[r.zona][r.giorno] = r;
+  });
+  
+  var html = '<div id="calendarPrintArea" style="padding:0">' +
+    '<div class="print-header" style="padding:16px 0 10px">' +
+    '<h2 style="font-family:DM Serif Display,serif;color:#1A3A5C">Comunità La Forza — Calendario Settimanale</h2>' +
+    '<p style="color:#666">Settimana '+( sett.tipo||'')+'&nbsp;&nbsp;|&nbsp;&nbsp;Dal '+( sett.dal||'')+'  al  '+(sett.al||'')+
+    '&nbsp;&nbsp;|&nbsp;&nbsp;Generato il '+new Date().toLocaleDateString('it-IT')+'</p>' +
+    '</div>' +
+    '<div class="cal-grid">' +
+    '<div class="cal-cell cal-head" style="font-size:.7rem">Zona / Mansione</div>';
+  
+  giorni.forEach(function(g){ html += '<div class="cal-cell cal-head">'+g+'</div>'; });
+  
+  Object.keys(perZona).forEach(function(zona) {
+    html += '<div class="cal-cell cal-zone">'+zona+'</div>';
+    giorni.forEach(function(g) {
+      var row = perZona[zona][g];
+      var nome = row ? (row.sostituto_nome||row.utente_nome||'—') : '—';
+      var style = (row && row.sostituto_nome) ? 'color:#92400E;font-style:italic' : '';
+      html += '<div class="cal-cell" style="text-align:center;font-size:.72rem;'+style+'">'+nome+'</div>';
     });
   });
-  var ruoliKeys2 = Object.keys(ruoliSett2);
-  if (ruoliKeys2.length > 0) {
-    html += '<div style="margin-top:14px;padding:10px 14px;border:2px solid #333;font-size:.82rem;line-height:1.9">';
-    ruoliKeys2.forEach(function(ruolo) {
-      html += '<div style="font-weight:700;text-decoration:underline">'+ruolo.toUpperCase()+
-        ': <span style="background:yellow;padding:1px 6px">'+ruoliSett2[ruolo].join(' - ')+'</span></div>';
-    });
-    if (S.testiOrdine&&S.testiOrdine.chiusura_extra&&S.testiOrdine.chiusura_extra.trim()) {
-      html += '<div style="margin-top:6px;padding-top:6px;border-top:1px solid #ccc;font-weight:700">'+
-        S.testiOrdine.chiusura_extra.toUpperCase()+'</div>';
-    }
-    html += '<div style="text-align:right;margin-top:10px;font-weight:700;font-style:italic">COMUNITA\' "LA FORZA"</div>';
-    html += '</div>';
-  }
-
-  html += '<div style="margin-top:8px;font-size:.68rem;color:#999;text-align:right">'+
-    'Comunita\' La Forza — Calatafimi-Segesta (TP) | '+new Date().toLocaleDateString('it-IT')+
-    ' | www.apwebradiosocialtv.it</div>';
-  html += '</div>';
+  
+  html += '</div>' +
+    '<div style="margin-top:30px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px">';
+  
+  // Firma operatori
+  var ops = S.operatori.slice(0,12);
+  ops.forEach(function(o) {
+    html += '<div style="border-bottom:1px solid #999;padding-bottom:4px;font-size:.8rem">' +
+      o.nome+'<br><small style="color:#999">Firma: _______________</small></div>';
+  });
+  html += '</div>' +
+    '<div style="margin-top:24px;text-align:right;font-size:.82rem">' +
+    '<b>La Responsabile</b><br>Dott.ssa Gessica Arancio<br>___________________________</div>' +
+    '</div>';
+  
   return html;
 }
-</script>
+
+function printCalendar() {
+  if (!S.currentSettimana) { toast('Seleziona prima una settimana','error'); return; }
+  var fmt = currentFormat;
+  var style = '<style>@page{size:';
+  if (fmt==='a4-landscape') style += 'A4 landscape';
+  else if (fmt==='a3-landscape') style += 'A3 landscape';
+  else style += 'A3 portrait';
+  style += ';margin:12mm}body{font-family:Arial,sans-serif;font-size:8pt}.cal-grid{display:grid;grid-template-columns:140px repeat(7,1fr);border:1pt solid #ccc;page-break-inside:avoid}.cal-cell{padding:4pt 6pt;border-right:1pt solid #ccc;border-bottom:1pt solid #ccc;font-size:7pt}.cal-head{background:#1A3A5C;color:white;font-weight:bold;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}.cal-zone{background:#f4f4f2;font-weight:bold;font-size:7pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}</style>';
+  
+  var content = style + buildCalendarPrintArea();
+  var w = window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><title>Calendario La Forza</title></head><body>'+content+'</body></html>');
+  w.document.close();
+  w.focus();
+  setTimeout(function(){ w.print(); }, 500);
+}
+
+function buildOrdineServizioHTML(fmt, oggetto, noteExtra) {
+  var sett = S.settimane.find(function(s){ return s.id===S.currentSettimana; }) || {};
+  var giorni = ['LUN','MAR','MER','GIO','VEN','SAB','DOM'];
+  var oggi = new Date().toLocaleDateString('it-IT', {day:'2-digit',month:'2-digit',year:'numeric'});
+
+  // ── Page size ──
+  var pageSize = fmt==='a4-landscape' ? 'A4 landscape' : fmt==='a3-landscape' ? 'A3 landscape' : fmt==='a3-portrait' ? 'A3 portrait' : 'A4 portrait';
+  var marginMm = 18;
+
+  // ── CSS ──
+  var css = [
+    '@page { size: '+pageSize+'; margin: '+marginMm+'mm; }',
+    'body { font-family: "Times New Roman", Times, serif; font-size: 10pt; color: #000; line-height: 1.45; }',
+    'h1.intestazione { font-size: 13pt; font-weight: bold; text-align: center; margin: 0 0 2pt; }',
+    'h2.intestazione { font-size: 11pt; font-weight: normal; text-align: center; margin: 0 0 10pt; letter-spacing: .05em; }',
+    '.destinatario { text-align: right; font-weight: bold; font-size: 10pt; margin-bottom: 14pt; }',
+    '.oggetto-line { font-weight: bold; text-decoration: underline; font-size: 10.5pt; margin: 0 0 8pt; }',
+    'p.testo { margin: 0 0 5pt; text-align: justify; font-style: italic; text-decoration: underline; font-size: 9.5pt; }',
+    /* TABELLA OPERATORI */
+    'table.cal { width: 100%; border-collapse: collapse; margin: 8pt 0; font-size: 8pt; page-break-inside: avoid; }',
+    'table.cal th { background: #1A3A5C; color: #fff; padding: 4pt 6pt; text-align: center; font-size: 8pt; font-weight: bold; -webkit-print-color-adjust: exact; print-color-adjust: exact; border: 1pt solid #1A3A5C; }',
+    'table.cal th.nominativo { text-align: left; width: 140pt; }',
+    'table.cal td { border: 1pt solid #AECBE8; padding: 3pt 5pt; font-size: 7.5pt; text-align: center; vertical-align: middle; }',
+    'table.cal td.nome { text-align: left; font-weight: 600; background: #EEF4FB; -webkit-print-color-adjust: exact; print-color-adjust: exact; }',
+    'table.cal td.sostituito { font-style: italic; color: #92400E; background: #FEF3C7; -webkit-print-color-adjust: exact; print-color-adjust: exact; }',
+    'table.cal tr.section-sep td { background: #1A3A5C; color: #fff; font-weight: bold; font-size: 8pt; padding: 4pt 6pt; text-align: left; -webkit-print-color-adjust: exact; print-color-adjust: exact; border: 1pt solid #1A3A5C; }',
+    /* NOTE */
+    '.note-box { background: #FFFDE7; border: 1pt solid #E6B800; padding: 6pt 10pt; margin: 8pt 0; page-break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }',
+    '.note-box p { margin: 2pt 0; font-size: 8.5pt; font-weight: bold; }',
+    /* CHIUSURA */
+    '.chiusura { margin: 10pt 0 6pt; font-size: 9.5pt; }',
+    '.chiusura p { margin: 1pt 0; }',
+    /* FIRME */
+    '.presa-visione-title { font-weight: bold; font-size: 10pt; margin: 12pt 0 6pt; border-top: 1pt solid #ccc; padding-top: 8pt; }',
+    '.firma-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10pt 18pt; margin-bottom: 14pt; }',
+    '.firma-item { padding: 18pt 0 2pt; border-bottom: 1pt solid #333; font-size: 8.5pt; min-height: 28pt; }',
+    '.firma-item .nome-op { font-size: 8pt; color: #555; }',
+    /* RESPONSABILE */
+    '.responsabile { text-align: right; margin-top: 16pt; font-size: 9.5pt; }',
+    '.responsabile .firma-line { border-bottom: 1pt solid #333; width: 180pt; display: inline-block; margin-top: 12pt; }',
+    '.nota-finale { margin-top: 14pt; text-align: center; font-style: italic; font-size: 8.5pt; border-top: 1pt dashed #ccc; padding-top: 7pt; color: #444; }',
+    '.sezione-title { font-weight: bold; font-size: 9.5pt; margin: 10pt 0 3pt; text-decoration: underline; }'
+  ].join('\n');
+
+  // ── Calendario operatori per giorno ──
+  // Raggruppa: per ogni operatore mostra le attività assegnate in ogni giorno
+  var calRows = S.calendario.filter(function(r){ return r.settimana_id === S.currentSettimana; });
+
+  // Costruisci mappa: operatore → giorno → array di mansioni
+  // (Gli operatori NON sono nel calendario degli utenti — il calendario è degli utenti)
+  // Per gli operatori usiamo S.operatori e mostriamo le mansioni supervisionate
+
+  // TABELLA OPERATORI: Nominativo | Lun Mar Mer Gio Ven Sab Dom
+  function buildTabella(lista, sezioneLabel, cssClass) {
+    var html = '';
+    html += '<tr class="section-sep"><td colspan="8">'+sezioneLabel+'</td></tr>';
+    html += '<tr>';
+    html += '<th class="nominativo">Nominativo</th>';
+    giorni.forEach(function(g){ html += '<th>'+g+'</th>'; });
+    html += '</tr>';
+    lista.forEach(function(persona) {
+      // Trova le assegnazioni di questa persona nella settimana
+      var assPerGiorno = {};
+      calRows.forEach(function(r) {
+        var nomeMatch = (r.utente_nome === persona.nome || r.sostituto_nome === persona.nome);
+        if (nomeMatch) {
+          if (!assPerGiorno[r.giorno]) assPerGiorno[r.giorno] = [];
+          assPerGiorno[r.giorno].push(r);
+        }
+      });
+      html += '<tr>';
+      html += '<td class="nome '+cssClass+'">'+persona.nome+'</td>';
+      giorni.forEach(function(g) {
+        var ass = assPerGiorno[g];
+        if (ass && ass.length > 0) {
+          var isSost = ass[0].sostituto_nome === persona.nome;
+          html += '<td class="'+(isSost?'sostituito':'')+'" title="'+(ass.map(function(a){ return a.zona; }).join(', '))+'">';
+          html += ass.map(function(a){ return '<span style="display:block;font-size:6.5pt;line-height:1.3">'+abbr(a.zona)+'</span>'; }).join('');
+          html += '</td>';
+        } else {
+          html += '<td style="color:#ccc">—</td>';
+        }
+      });
+      html += '</tr>';
+    });
+    return html;
+  }
+
+  function abbr(s) {
+    if (!s) return '';
+    var map = {
+      'Sala':'Sala','Ufficio':'Uff.','Atrio':'Atrio','Anfiteatro':'Anfit.',
+      'Corridoi':'Corr.','Cucina':'Cucina','Mensa':'Mensa','Lavanderia':'Lav.',
+      'Responsabilità':'Resp.','Manutenzione':'Man.','Stanze':'Stanze'
+    };
+    return map[s] || s.substring(0,6);
+  }
+
+  // Corpo del documento
+  var body = '';
+
+  // INTESTAZIONE
+  body += '<h1 class="intestazione">COMUNITÀ TERAPEUTICA "LA FORZA"</h1>';
+  body += '<h2 class="intestazione">Calatafimi-Segesta (TP) — Via Piersanti Mattarella SnC</h2>';
+  body += '<hr style="border:none;border-top:1.5pt solid #1A3A5C;margin:4pt 0 12pt">';
+
+  // DESTINATARIO
+  body += '<div class="destinatario">Ai dipendenti della Comunità La Forza</div>';
+
+  // OGGETTO
+  var oggettoTesto = oggetto || 'Ordine di servizio — Settimana '+(sett.tipo||'')+'  dal '+(sett.dal||'...')+' al '+(sett.al||'...');
+  body += '<p class="oggetto-line">OGGETTO:&nbsp;&nbsp;'+oggettoTesto+'</p>';
+
+  // TESTO INTRODUTTIVO
+  body += '<p class="testo">La sottoscritta Gessica Arancio nata ad Alcamo (TP) il 09/11/1991, in qualità di Responsabile di struttura della Comunità «LA FORZA» con sede operativa in Calatafimi-Segesta, in via Piersanti Mattarella SnC.</p>';
+  body += '<p class="testo">Con il presente ordine di servizio, si dispone quanto segue:</p>';
+  body += '<p class="testo">I dipendenti sono invitati a visualizzare le consegne da me redatte, in particolare le attività terapeutiche organizzate per gli ospiti della comunità.</p>';
+  body += '<p class="testo">Gli stessi sono tenuti a svolgere i compiti assegnati nel calendario settimanale redatto dalla sottoscritta. Si prega di voler dare prova attraverso la firma nel calendario ed eventuale motivazione o giustificazione per il mancato svolgimento del medesimo compito assegnato.</p>';
+  body += '<p class="testo">La mancata giustificazione comporterà eventuale richiamo.</p>';
+  body += '<p class="testo">Il presente ordine di servizio dovrà essere firmato dai dipendenti come presa visione.</p>';
+  body += '<p class="testo">Si allega calendario settimanale.</p>';
+
+  // TABELLA OPERATORI
+  if (S.operatori.length > 0) {
+    body += '<p class="sezione-title" style="margin-top:10pt">CALENDARIO OPERATORI</p>';
+    body += '<table class="cal"><tbody>';
+    body += buildTabella(S.operatori, '🧑‍⚕️  OPERATORI', 'op-name');
+    body += '</tbody></table>';
+  }
+
+  // TABELLA UTENTI
+  if (S.utenti.length > 0) {
+    body += '<p class="sezione-title">CALENDARIO UTENTI</p>';
+    body += '<table class="cal"><tbody>';
+    body += buildTabella(S.utenti, '👤  UTENTI', 'utente-name');
+    body += '</tbody></table>';
+  }
+
+  // NOTE OPERATIVE
+  body += '<div class="note-box">';
+  body += '<p style="font-size:9pt;font-weight:bold;margin-bottom:4pt;text-decoration:underline">NOTE OPERATIVE:</p>';
+  body += '<p>TUTTE LE ATTIVITÀ DOVRANNO ESSERE SVOLTE CON LA PRESENZA DELL\'OPERATORE; I RAGAZZI NON VANNO MAI LASCIATI DA SOLI.</p>';
+  body += '<p>LE ATTIVITÀ SARANNO DELLA DURATA DI 1 ORA / 1 ORA E MEZZA. DOPO AVRETE TUTTO IL TEMPO PER SVOLGERE TUTTA LA BUROCRAZIA E LE CHIAMATE FAMILIARI.</p>';
+  body += '<p>OGNI OPERATORE DOVRÀ AGGIORNARE NEL DIARIO DI BORDO L\'ATTIVITÀ SVOLTA E SCRIVERE GLI OSPITI CHE NON HANNO PARTECIPATO.</p>';
+  body += '<p>SI PREGA I COLLABORATORI DI NON USARE IL TELEFONINO DURANTE LE ORE LAVORATIVE E DI STARE FUORI A SUPERVISIONARE I RAGAZZI.</p>';
+  if (noteExtra) body += '<p style="margin-top:5pt">'+noteExtra+'</p>';
+  body += '</div>';
+
+  // CHIUSURA
+  body += '<div class="chiusura">';
+  body += '<p>Sicuri di una vostra completa disponibilità,</p>';
+  body += '<p>Porgo Cordiali Saluti,</p>';
+  body += '<p>Castellammare del Golfo, lì&nbsp;&nbsp;<span style="border-bottom:1pt solid #333;display:inline-block;width:160pt">&nbsp;</span></p>';
+  body += '</div>';
+
+  // PRESA VISIONE
+  body += '<div class="presa-visione-title">PRESA VISIONE:</div>';
+  body += '<div class="firma-grid">';
+  // Tutti gli operatori + tutti gli utenti (o solo operatori, come vuoi)
+  var tuttiFirma = S.operatori.slice();
+  tuttiFirma.forEach(function(op) {
+    body += '<div class="firma-item">';
+    body += '<div class="nome-op">'+op.nome+'</div>';
+    body += '<div style="font-size:7pt;color:#999;margin-top:2pt">'+( op.ruolo||'Operatore')+'</div>';
+    body += '</div>';
+  });
+  body += '</div>';
+
+  // LA RESPONSABILE
+  body += '<div class="responsabile">';
+  body += '<div>La Responsabile</div>';
+  body += '<div><strong>Dott.ssa Gessica Arancio</strong></div>';
+  body += '<div class="firma-line">&nbsp;</div>';
+  body += '</div>';
+
+  // NOTA FINALE
+  body += '<div class="nota-finale">';
+  body += '«Eventuali modifiche all\'ordine di servizio devono essere comunicate alla responsabile Gessica Arancio.»';
+  body += '</div>';
+
+  return '<!DOCTYPE html><html lang="it"><head><meta charset="UTF-8"><title>Ordine di Servizio — La Forza</title>' +
+    '<style>'+css+'</style></head><body>'+body+'</body></html>';
+}
+
+function printOrdineServizio() {
+  // Apri prima un modal per permettere di personalizzare oggetto e note
+  openModal('📋 Stampa Ordine di Servizio',
+    '<div class="form-group"><label class="form-label">Oggetto (lascia vuoto per automatico)</label>' +
+    '<input id="os_oggetto" class="form-control" placeholder="es. Ordine di servizio settimana 20 — dal 12/05 al 18/05" /></div>' +
+    '<div class="form-group"><label class="form-label">Note aggiuntive (opzionale)</label>' +
+    '<textarea id="os_note" class="form-control" rows="3" placeholder="Eventuali comunicazioni extra..."></textarea></div>' +
+    '<div class="form-group"><label class="form-label">Formato carta</label>' +
+    '<select id="os_fmt" class="form-control">' +
+    '<option value="a4-portrait">A4 Verticale (consigliato)</option>' +
+    '<option value="a4-landscape">A4 Orizzontale</option>' +
+    '<option value="a3-portrait">A3 Verticale</option>' +
+    '<option value="a3-landscape">A3 Orizzontale</option>' +
+    '</select></div>',
+    [
+      {label:'Annulla', cls:'btn-ghost', action:'closeModal()'},
+      {label:'🖨️ Anteprima & Stampa', cls:'btn-primary', action:'doStampaOrdine()'}
+    ]
+  );
+}
+
+function doStampaOrdine() {
+  var oggetto = document.getElementById('os_oggetto') ? document.getElementById('os_oggetto').value : '';
+  var note    = document.getElementById('os_note')    ? document.getElementById('os_note').value    : '';
+  var fmt     = document.getElementById('os_fmt')     ? document.getElementById('os_fmt').value     : 'a4-portrait';
+  closeModal();
+  var html = buildOrdineServizioHTML(fmt, oggetto, note);
+  var w = window.open('','_blank','width=900,height=700');
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(function(){ w.print(); }, 800);
+}
+
+function printDebiti() {
+  var aperti = S.debiti.filter(function(d){ return d.stato==='aperto'; });
+  var style = '<style>@page{size:A4;margin:15mm}body{font-family:Arial,sans-serif;font-size:9pt}table{width:100%;border-collapse:collapse}th{background:#1A3A5C;color:white;padding:5pt;-webkit-print-color-adjust:exact;print-color-adjust:exact}td{padding:4pt 6pt;border:1pt solid #ccc}.open{color:#C0392B}.closed{color:#2A7A2A}</style>';
+  var html = style + '<h2>Comunità La Forza — Debiti & Crediti</h2>' +
+    '<p>Generato il '+new Date().toLocaleDateString('it-IT')+'</p><br>' +
+    '<table><thead><tr><th>Debitore</th><th>Creditore</th><th>Mansione</th><th>Settimana</th><th>Data</th><th>Stato</th></tr></thead><tbody>';
+  S.debiti.forEach(function(d) {
+    var mansione = S.mansioni.find(function(m){ return m.id===d.mansione_ref; });
+    html += '<tr><td>'+d.debitore_nome+'</td><td>'+d.creditore_nome+'</td>' +
+      '<td>'+(mansione?mansione.descrizione:d.mansione_ref)+'</td>' +
+      '<td>'+d.settimana_ref+'</td><td>'+d.data_creazione+'</td>' +
+      '<td class="'+(d.stato==='aperto'?'open':'closed')+'"><b>'+(d.stato==='aperto'?'APERTO':'SALDATO')+'</b></td></tr>';
+  });
+  html += '</tbody></table>';
+  var w = window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html><head><title>Debiti La Forza</title></head><body>'+html+'</body></html>');
+  w.document.close(); w.focus();
+  setTimeout(function(){ w.print(); }, 500);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  UTILITY UI
+// ═══════════════════════════════════════════════════════════════════
+function field(id, label, value, disabled, type, opts, selected) {
+  var inp = '';
+  if (type==='select') {
+    inp = '<select id="'+id+'" class="form-control">';
+    (opts||[]).forEach(function(o){ inp += '<option value="'+o.v+'"'+(String(o.v)===String(selected)?' selected':'')+'>'+o.l+'</option>'; });
+    inp += '</select>';
+  } else {
+    inp = '<input id="'+id+'" class="form-control" value="'+( value||'')+'"'+(disabled?' disabled':'')+' />';
+  }
+  return '<div class="form-group"><label class="form-label">'+label+'</label>'+inp+'</div>';
+}
+
+function selField(id, opts, selected) {
+  var s = '<select id="'+id+'" class="form-control">';
+  opts.forEach(function(o){ s += '<option value="'+o.v+'"'+(o.v===selected?' selected':'')+'>'+o.l+'</option>'; });
+  return s + '</select>';
+}
+
+function buildSelect(id, label, opts, selected) {
+  return '<div class="form-group"><label class="form-label">'+label+'</label>' + selField(id, opts, selected) + '</div>';
+}
+
+function getVal(id) {
+  var el = document.getElementById(id);
+  return el ? el.value : '';
+}
+
+function setVal(id, val) {
+  var el = document.getElementById(id);
+  if (el) el.value = val;
+}
+
+function esc(s) {
+  return (s||'').replace(/'/g,"&#39;").replace(/"/g,'&quot;');
+}
+
+function filterTable(q, tableId) {
+  var rows = document.querySelectorAll('#'+tableId+' tbody tr');
+  var lq = q.toLowerCase();
+  rows.forEach(function(r) {
+    r.style.display = r.textContent.toLowerCase().includes(lq) ? '' : 'none';
+  });
+}
+
+function switchTab(el, panelId) {
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+  el.classList.add('active');
+  var panel = document.getElementById(panelId);
+  if (panel) panel.classList.add('active');
+}
+
+function openModal(title, body, buttons) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = body;
+  var foot = '';
+  (buttons||[]).forEach(function(b){ foot += '<button class="btn '+b.cls+'" onclick="'+b.action+'">'+b.label+'</button>'; });
+  document.getElementById('modalFooter').innerHTML = foot;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+function showLoader(show) {
+  document.getElementById('loadingOverlay').classList.toggle('show', show);
+}
+
+function toast(msg, type) {
+  var el = document.createElement('div');
+  el.className = 'toast' + (type ? ' '+type : '');
+  el.textContent = msg;
+  document.getElementById('toastContainer').appendChild(el);
+  setTimeout(function(){ el.remove(); }, 3200);
+}
+
+function deleteItem(type, id, nome) {
+  if (!confirm('Eliminare "'+nome+'"?')) return;
+  var actionMap = { utenti:'deleteUtente', operatori:'deleteOperatore', mansioni:'deleteMansione' };
+  var refreshMap = {
+    utenti: function(){ return callApi('getUtenti').then(function(d){ S.utenti=d||[]; renderUtenti(); }); },
+    operatori: function(){ return callApi('getOperatori').then(function(d){ S.operatori=d||[]; renderOperatori(); }); },
+    mansioni: function(){ return callApi('getMansioni').then(function(d){ S.mansioni=d||[]; renderMansioni(); }); },
+  };
+  showLoader(true);
+  callApi(actionMap[type], { id: id }).then(refreshMap[type])
+    .then(function(){ toast('Eliminato ✓','success'); })
+    .catch(function(e){ toast('Errore: '+e.message,'error'); })
+    .finally(function(){ showLoader(false); });
+}
+
+function initSheets() {
+  showLoader(true);
+  callApi('initSheets').then(function(){
+    toast('Database inizializzato ✓','success');
+    return loadAll();
+  }).finally(function(){ showLoader(false); });
+}
+
+
+
+// ═══════════════════════════════════════════════════════════════════
+//  AUTH — LOGIN / LOGOUT
+// ═══════════════════════════════════════════════════════════════════
+var currentUser = null;
+
+function showErr(msg) {
+  var el = document.getElementById('loginError');
+  if (el) { el.textContent = msg; el.classList.add('show'); }
+}
+function hideErr() {
+  var el = document.getElementById('loginError');
+  if (el) el.classList.remove('show');
+}
+
+function doLogin() {
+  var username = document.getElementById('loginUser').value.trim();
+  var password = document.getElementById('loginPass').value;
+  var btn      = document.getElementById('loginBtn');
+  var errEl    = document.getElementById('loginError');
+
+  if (!username || !password) {
+    showErr('Inserisci username e password'); return;
+  }
+
+  btn.textContent = 'Accesso in corso...';
+  btn.disabled = true;
+  hideErr();
+
+  callApi('login', { username: username, password: password })
+    .then(function(res) {
+      if (res && res.ok) {
+        currentUser = res;
+        // Salva sessione se "Ricordami" è spuntato
+        var remember = document.getElementById('loginRemember');
+        if (remember && remember.checked) {
+          try {
+            localStorage.setItem('lf_session', JSON.stringify({
+              username: res.username, nome: res.nome, ruolo: res.ruolo,
+              ts: Date.now()
+            }));
+          } catch(e) {}
+        }
+        openApp(res);
+      } else {
+        showErr((res && res.error) ? res.error : 'Username o password errati');
+        btn.textContent = 'Accedi';
+        btn.disabled = false;
+        document.getElementById('loginPass').value = '';
+      }
+    })
+    .catch(function(e) {
+      showErr('Errore di connessione. Riprova.');
+      btn.textContent = 'Accedi';
+      btn.disabled = false;
+    });
+}
+
+function openApp(res) {
+  document.getElementById('loginOverlay').classList.remove('show');
+  document.getElementById('mainApp').style.display = 'flex';
+  document.getElementById('userBadge').style.display = 'flex';
+  document.getElementById('userName').textContent = res.nome || res.username;
+  var ruoloLabel = res.ruolo === 'admin' ? 'Amministratore' : (res.ruolo || 'Operatore');
+  document.getElementById('userRole').textContent = ruoloLabel;
+  document.getElementById('userAvatar').textContent = (res.nome||res.username).charAt(0).toUpperCase();
+  loadAll().then(function(){
+    applyPermessiMenu();
+    logAction('login', 'app', 'Accesso effettuato');
+    showPage('dashboard');
+  });
+}
+
+function doLogout() {
+  if (!confirm('Vuoi uscire dall\'app?')) return;
+  currentUser = null;
+  try { localStorage.removeItem('lf_session'); } catch(e) {}
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('loginOverlay').classList.add('show');
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+  document.getElementById('loginBtn').textContent = 'Accedi';
+  document.getElementById('loginBtn').disabled = false;
+  document.getElementById('loginError').textContent = '';
+  document.getElementById('userBadge').style.display = 'none';
+  document.getElementById('pageContent').innerHTML = '';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+//  MOBILE SIDEBAR TOGGLE
+// ═══════════════════════════════════════════════════════════════════
+function toggleGroup(groupId) {
+  var group = document.getElementById(groupId);
+  if (!group) return;
+  var isOpen = group.classList.contains('open');
+  // Chiudi tutti
+  document.querySelectorAll('.nav-group').forEach(function(g){
+    g.classList.remove('open');
+  });
+  // Apri quello cliccato se era chiuso
+  if (!isOpen) group.classList.add('open');
+}
+
+// Apri automaticamente il gruppo che contiene la voce attiva
+function openGroupForPage(page) {
+  var navEl = document.getElementById('nav-' + page);
+  if (!navEl) return;
+  var group = navEl.closest('.nav-group');
+  if (group) {
+    document.querySelectorAll('.nav-group').forEach(function(g){ g.classList.remove('open'); });
+    group.classList.add('open');
+  }
+}
+
+function toggleSidebar() {
+  var sidebar  = document.querySelector('.sidebar');
+  var overlay  = document.getElementById('sidebarOverlay');
+  var btn      = document.getElementById('hamburgerBtn');
+  var isOpen   = sidebar.classList.contains('open');
+  if (isOpen) {
+    closeSidebar();
+  } else {
+    sidebar.classList.add('open');
+    overlay.classList.add('open');
+    btn.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function closeSidebar() {
+  var sidebar = document.querySelector('.sidebar');
+  var overlay = document.getElementById('sidebarOverlay');
+  var btn     = document.getElementById('hamburgerBtn');
+  sidebar.classList.remove('open');
+  overlay.classList.remove('open');
+  btn.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+// Auto-close sidebar on nav item click (mobile)
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('.nav-item').forEach(function(el) {
+    el.addEventListener('click', function() {
+      if (window.innerWidth <= 768) closeSidebar();
+    });
+  });
+});
+
+// Close sidebar on resize to desktop
+window.addEventListener('resize', function() {
+  if (window.innerWidth > 768) closeSidebar();
+});
+
+// Close modal on overlay click
+document.getElementById('modalOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+</script></script>
 </body>
 </html>
