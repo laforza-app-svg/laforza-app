@@ -1407,25 +1407,31 @@ window.addEventListener('load', function() {
 
 function loadAll() {
   showLoader(true);
-  function safe(promise, fallback) {
-    return promise.catch(function(){ return fallback; });
+  function sc(action, key, def, params) {
+    return callApi(action, params||{}).then(function(d){
+      S[key] = Array.isArray(d) ? d : (d && typeof d === 'object' && !Array.isArray(d) ? d : def);
+    }).catch(function(){ S[key] = def; });
   }
   return Promise.all([
-    safe(callApi('getUtenti').then(function(d){ S.utenti = d||[]; }), null),
-    safe(callApi('getOperatori').then(function(d){ S.operatori = d||[]; }), null),
-    safe(callApi('getMansioni').then(function(d){ S.mansioni = d||[]; }), null),
-    safe(callApi('getDebiti').then(function(d){ S.debiti = d||[]; }), null),
-    safe(callApi('getTurniOperatori').then(function(d){ S.turniOperatori = d||[]; }), null),
-    safe(callApi('getCompitiOperatori').then(function(d){ S.compitiOperatori = d||[]; }), null),
-    safe(callApi('getCompitiTipi').then(function(d){ S.compitiTipi = d||[]; }), null),
-    safe(callApi('getRuoli').then(function(d){ S.ruoli = d||[]; }), null),
-    safe(callApi('getPresenzeFisse').then(function(d){ S.presenzeFisse = d||[]; }), null),
-    safe(callApi('getTestiOrdine').then(function(d){ S.testiOrdine = d||{}; }), null),
-    safe(callApi('getRuoliPermessi').then(function(d){ S.ruoliPermessi = d||[]; }), null),
-    safe(callApi('getMonteFerie',{}).then(function(d){ S.monteFerie = d||[]; }), null),
-    safe(callApi('getRichiesteAssenza',{}).then(function(d){ S.richiesteAssenza = d||[]; }), null),
-    safe(callApi('getNoteUtente',{}).then(function(d){ S.noteUtenti = d||[]; }), null),
-  ]).finally(function(){ showLoader(false); });
+    sc('getUtenti',           'utenti',           []),
+    sc('getOperatori',        'operatori',        []),
+    sc('getMansioni',         'mansioni',         []),
+    sc('getDebiti',           'debiti',           []),
+    sc('getTurniOperatori',   'turniOperatori',   []),
+    sc('getCompitiOperatori', 'compitiOperatori', []),
+    sc('getCompitiTipi',      'compitiTipi',      []),
+    sc('getRuoli',            'ruoli',            []),
+    sc('getPresenzeFisse',    'presenzeFisse',    []),
+    sc('getTestiOrdine',      'testiOrdine',      {}),
+    sc('getRuoliPermessi',    'ruoliPermessi',    []),
+    sc('getMonteFerie',       'monteFerie',       [], {}),
+    sc('getRichiesteAssenza', 'richiesteAssenza', [], {}),
+    sc('getNoteUtente',       'noteUtenti',       [], {}),
+  ]).then(function(){
+    showLoader(false);
+  }).catch(function(){
+    showLoader(false);
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════
