@@ -790,20 +790,6 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
   </div>
 </div>
 
-<!-- LOADING -->
-<div class="loading-overlay" id="loadingOverlay">
-  <div class="loading-card">
-    <div class="loading-spinner"></div>
-    <div class="loading-title" id="loadingTitle">La Forza</div>
-    <div class="loading-msg" id="loadingMsg">Elaborazione in corso...</div>
-    <div class="loading-bar-wrap">
-      <div class="loading-bar" id="loadingBar"></div>
-    </div>
-    <div id="loadingPercent" style="font-size:1.4rem;font-weight:700;color:var(--navy);margin-top:10px;display:none">0%</div>
-    <div id="loadingStep" style="font-size:.72rem;color:var(--gray3);margin-top:4px;min-height:16px"></div>
-  </div>
-</div>
-
 <!-- APP -->
 <div class="app" id="mainApp" style="display:none">
 
@@ -2595,7 +2581,7 @@ function printTurniOperatori() {
   });
   html += '</tbody></table>';
   var w = window.open('','_blank');
-  w.document.write('<!DOCTYPE html><html><head><title>Turni Operatori</title></head><body>'+html+'</body></html>');
+  w.document.write('<!DOCTYPE html><html><head><title>Turni Operatori</title></head><body>'+html+'</'+'script></body></html>');
   w.document.close(); w.focus();
   setTimeout(function(){ w.print(); }, 600);
 }
@@ -3685,3 +3671,6 @@ function buildCalendarPrintArea() {
   html += '</div>';
   return html;
 }
+</script>
+</body>
+</html>
