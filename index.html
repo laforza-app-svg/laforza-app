@@ -1007,6 +1007,17 @@ var LOCAL_USERS = [
 ];
 var usersLoaded = false;
 
+
+function showLoaderProgress(percent, msg, step) {
+  var bar = document.getElementById('loadingBar');
+  if (bar) { bar.classList.add('determinate'); bar.style.width = percent + '%'; }
+  if (msg) { var el = document.getElementById('loadingMsg'); if (el) el.textContent = msg; }
+  var pct = document.getElementById('loadingPercent');
+  if (pct) { pct.textContent = Math.round(percent) + '%'; pct.style.display = 'block'; }
+  var stepEl = document.getElementById('loadingStep');
+  if (stepEl) stepEl.textContent = step || '';
+}
+
 function showErr(msg) {
   var el = document.getElementById('loginError');
   if (el) { el.textContent = msg; el.classList.add('show'); }
