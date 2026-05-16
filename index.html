@@ -1021,6 +1021,81 @@ var LOCAL_USERS = [
 ];
 var usersLoaded = false;
 
+function showErr(msg) {
+  var el = document.getElementById('loginError');
+  if (el) { el.textContent = msg; el.classList.add('show'); }
+}
+function hideErr() {
+  var el = document.getElementById('loginError');
+  if (el) el.classList.remove('show');
+}
+
+function doLogin() {
+  var username = document.getElementById('loginUser').value.trim();
+  var password = document.getElementById('loginPass').value;
+  var btn      = document.getElementById('loginBtn');
+  if (!username || !password) { showErr('Inserisci username e password'); return; }
+  btn.textContent = 'Accesso in corso...';
+  btn.disabled = true;
+  hideErr();
+  callApi('login', { username: username, password: password })
+    .then(function(res) {
+      if (res && res.ok) {
+        currentUser = res;
+        var remember = document.getElementById('loginRemember');
+        if (remember && remember.checked) {
+          try {
+            localStorage.setItem('lf_session', JSON.stringify({
+              username: res.username, nome: res.nome, ruolo: res.ruolo, ts: Date.now()
+            }));
+          } catch(e) {}
+        }
+        openApp(res);
+      } else {
+        showErr((res && res.error) ? res.error : 'Username o password errati');
+        btn.textContent = 'Accedi';
+        btn.disabled = false;
+        document.getElementById('loginPass').value = '';
+      }
+    })
+    .catch(function(e) {
+      showErr('Errore di connessione. Riprova.');
+      btn.textContent = 'Accedi';
+      btn.disabled = false;
+    });
+}
+
+function openApp(res) {
+  document.getElementById('loginOverlay').classList.remove('show');
+  document.getElementById('mainApp').style.display = 'flex';
+  document.getElementById('userBadge').style.display = 'flex';
+  document.getElementById('userName').textContent = res.nome || res.username;
+  var ruoloLabel = res.ruolo === 'admin' ? 'Amministratore' : (res.ruolo || 'Operatore');
+  document.getElementById('userRole').textContent = ruoloLabel;
+  document.getElementById('userAvatar').textContent = (res.nome||res.username).charAt(0).toUpperCase();
+  loadAll().then(function(){
+    applyPermessiMenu();
+    logAction('login', 'app', 'Accesso effettuato');
+    showPage('dashboard');
+  });
+}
+
+function doLogout() {
+  if (!confirm('Vuoi uscire dall\'app?')) return;
+  currentUser = null;
+  try { localStorage.removeItem('lf_session'); } catch(e) {}
+  document.getElementById('mainApp').style.display = 'none';
+  document.getElementById('loginOverlay').classList.add('show');
+  document.getElementById('loginUser').value = '';
+  document.getElementById('loginPass').value = '';
+  document.getElementById('loginBtn').textContent = 'Accedi';
+  document.getElementById('loginBtn').disabled = false;
+  hideErr();
+  document.getElementById('userBadge').style.display = 'none';
+  document.getElementById('pageContent').innerHTML = '';
+}
+
+
 function loadUsersFromDB() {
   return new Promise(function(resolve) {
     if (usersLoaded) { resolve(); return; }
