@@ -996,52 +996,6 @@ var S = {
   settimane: [],   // lista settimane generate
 };
 
-
-// ===================================================================
-//  FORM HELPERS
-// ===================================================================
-function field(id, label, defaultVal, required, type, options, selectedVal) {
-  type = type || 'text';
-  var req = required ? ' required' : '';
-  var html = '<div class="form-group"><label class="form-label">' + label + '</label>';
-  if (type === 'select') {
-    html += '<select class="form-control" id="' + id + '"' + req + '>';
-    if (options) {
-      options.forEach(function(o) {
-        var sel = (selectedVal !== undefined && String(o.v) === String(selectedVal)) ? ' selected' : '';
-        html += '<option value="' + o.v + '"' + sel + '>' + o.l + '</option>';
-      });
-    }
-    html += '</select>';
-  } else if (type === 'textarea') {
-    html += '<textarea class="form-control" id="' + id + '" rows="3"' + req + '>' + (defaultVal || '') + '</textarea>';
-  } else if (type === 'checkbox') {
-    html += '<input type="checkbox" id="' + id + '" ' + (defaultVal ? 'checked' : '') + '>';
-  } else {
-    html += '<input type="' + type + '" class="form-control" id="' + id + '" value="' + (defaultVal || '') + '"' + req + '>';
-  }
-  html += '</div>';
-  return html;
-}
-
-function getVal(id) {
-  var el = document.getElementById(id);
-  if (!el) return '';
-  if (el.type === 'checkbox') return el.checked;
-  return el.value;
-}
-
-function setVal(id, val) {
-  var el = document.getElementById(id);
-  if (!el) return;
-  if (el.type === 'checkbox') el.checked = !!val;
-  else el.value = val;
-}
-
-function fBtn(label, cls, action) {
-  return '<button class="btn ' + cls + '" onclick="' + action + '">' + label + '</button>';
-}
-
 // ═══════════════════════════════════════════════════════════════════
 //  API
 // ═══════════════════════════════════════════════════════════════════
@@ -1160,8 +1114,6 @@ function loadUsersFromDB() {
   });
 }
 
-var proxyOk = true; // diventa false se il proxy non risponde
-
 function api(action, data) {
   // Login locale
   if (action === 'login') {
@@ -1179,34 +1131,17 @@ function api(action, data) {
     });
   }
 
-  // Tutte le altre chiamate via proxy Cloudflare con fallback ai mock
-  var timeout = new Promise(function(_, reject){
-    setTimeout(function(){ reject(new Error('timeout')); }, 8000);
-  });
-
-  var fetchCall = fetch(PROXY_URL, {
+  // Tutte le altre chiamate via proxy Cloudflare (fetch normale, no CORS)
+  return fetch(PROXY_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: action, data: data || {} })
   })
   .then(function(r){ return r.json(); })
   .then(function(r){
-    if (r && r.ok === false) {
-      var mock = mockData(action);
-      if (mock !== null) return mock;
-      throw new Error(r.error || 'Errore server');
-    }
+    if (r && r.ok === false) throw new Error(r.error || 'Errore server');
     return r && r.data !== undefined ? r.data : r;
   });
-
-  return Promise.race([fetchCall, timeout])
-    .catch(function() {
-      // Proxy non raggiungibile: usa dati mock
-      proxyOk = false;
-      var mock = mockData(action);
-      if (mock !== null) return mock;
-      return null;
-    });
 }
 
 
@@ -1215,7 +1150,169 @@ var isAppsScript = false; // GitHub Pages + Cloudflare proxy mode
 // callApi usa il proxy Cloudflare — nessun fallback mock
 var callApi = api;
 
-// ═══════════════════════════════════════════════════════════════════
+// ===================================================================
+//  FORM HELPERS
+// ===================================================================
+function field(id, label, defaultVal, required, type, options, selectedVal) {
+  type = type || 'text';
+  var req = required ? ' required' : '';
+  var html = '<div class="form-group"><label class="form-label">' + label + '</label>';
+  if (type === 'select') {
+    html += '<select class="form-control" id="' + id + '"' + req + '>';
+    if (options) {
+      options.forEach(function(o) {
+        var sel = (selectedVal !== undefined && String(o.v) === String(selectedVal)) ? ' selected' : '';
+        html += '<option value="' + o.v + '"' + sel + '>' + o.l + '</option>';
+      });
+    }
+    html += '</select>';
+  } else if (type === 'textarea') {
+    html += '<textarea class="form-control" id="' + id + '" rows="3"' + req + '>' + (defaultVal || '') + '</textarea>';
+  } else if (type === 'checkbox') {
+    html += '<input type="checkbox" id="' + id + '" ' + (defaultVal ? 'checked' : '') + '>';
+  } else {
+    html += '<input type="' + type + '" class="form-control" id="' + id + '" value="' + (defaultVal !== undefined ? defaultVal : '') + '"' + req + '>';
+  }
+  html += '</div>';
+  return html;
+}
+
+function getVal(id) {
+  var el = document.getElementById(id);
+  if (!el) return '';
+  if (el.type === 'checkbox') return el.checked;
+  return el.value;
+}
+
+function setVal(id, val) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  if (el.type === 'checkbox') el.checked = !!val;
+  else el.value = val;
+}
+
+function selField(id, opts, selected) {
+  var html = '<select class="form-control" id="' + id + '">';
+  opts.forEach(function(o) {
+    var sel = String(o.v) === String(selected) ? ' selected' : '';
+    html += '<option value="' + o.v + '"' + sel + '>' + o.l + '</option>';
+  });
+  html += '</select>';
+  return html;
+}
+
+function buildSelect(id, label, opts, selected) {
+  return '<div class="form-group"><label class="form-label">' + label + '</label>' + selField(id, opts, selected) + '</div>';
+}
+
+function showLoader(show) {
+  var el = document.getElementById('loadingOverlay');
+  if (!el) return;
+  if (show) el.classList.add('show'); else el.classList.remove('show');
+}
+
+function toast(msg, type) {
+  var c = document.getElementById('toastContainer');
+  if (!c) return;
+  var t = document.createElement('div');
+  t.className = 'toast' + (type ? ' ' + type : '');
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(function(){ if (t.parentNode) t.parentNode.removeChild(t); }, 3500);
+}
+
+function filterTable(val, tableId) {
+  var table = document.getElementById(tableId);
+  if (!table) return;
+  var rows = table.querySelectorAll('tbody tr');
+  var v = val.toLowerCase();
+  rows.forEach(function(row){
+    row.style.display = row.textContent.toLowerCase().indexOf(v) >= 0 ? '' : 'none';
+  });
+}
+
+function switchTab(el, panelId) {
+  document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+  document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+  el.classList.add('active');
+  var panel = document.getElementById(panelId);
+  if (panel) panel.classList.add('active');
+}
+
+function esc(s) {
+  return (s||'').replace(/'/g, '').replace(/"/g, '');
+}
+
+function toggleGroup(groupId) {
+  var group = document.getElementById(groupId);
+  if (!group) return;
+  group.classList.toggle('open');
+}
+
+function openGroupForPage(page) {
+  var map = {
+    'dashboard':'group-panoramica','utenti':'group-anagrafica',
+    'operatori':'group-anagrafica','mansioni':'group-anagrafica',
+    'calendario':'group-pianificazione','turni':'group-pianificazione',
+    'presenze':'group-pianificazione','compiti':'group-pianificazione',
+    'ruoli':'group-pianificazione','sostituzioni':'group-gestione',
+    'debiti':'group-gestione','presenze_op':'group-gestione',
+    'testi':'group-gestione','permessi':'group-admin',
+    'log':'group-admin','report':'group-report',
+  };
+  var groupId = map[page];
+  if (groupId) {
+    var group = document.getElementById(groupId);
+    if (group && !group.classList.contains('open')) group.classList.add('open');
+  }
+}
+
+function toggleSidebar() {
+  var s = document.querySelector('.sidebar');
+  var o = document.getElementById('sidebarOverlay');
+  if (s) s.classList.toggle('open');
+  if (o) o.classList.toggle('show');
+}
+
+function closeSidebar() {
+  var s = document.querySelector('.sidebar');
+  var o = document.getElementById('sidebarOverlay');
+  if (s) s.classList.remove('open');
+  if (o) o.classList.remove('show');
+}
+
+function openModal(title, bodyHtml, footerButtons) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = bodyHtml;
+  var footer = document.getElementById('modalFooter');
+  footer.innerHTML = '';
+  if (Array.isArray(footerButtons)) {
+    footerButtons.forEach(function(btn) {
+      var b = document.createElement('button');
+      b.className = 'btn ' + (btn.cls || 'btn-ghost');
+      b.textContent = btn.label || '';
+      if (btn.action === 'closeModal' || btn.action === 'close') {
+        b.onclick = function(){ closeModal(); };
+      } else if (typeof btn.action === 'string') {
+        b.onclick = new Function(btn.action + '()');
+      } else if (typeof btn.action === 'function') {
+        b.onclick = btn.action;
+      }
+      footer.appendChild(b);
+    });
+  } else if (typeof footerButtons === 'string') {
+    footer.innerHTML = footerButtons;
+  }
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  document.getElementById('modalBody').innerHTML = '';
+  document.getElementById('modalFooter').innerHTML = '';
+}
+
+// ===================================================================
 //  MOCK DATA (per preview fuori Apps Script)
 // ═══════════════════════════════════════════════════════════════════
 function mockData(action) {
@@ -1455,132 +1552,28 @@ window.addEventListener('load', function() {
 
 function loadAll() {
   showLoader(true);
-  function sc(action, key, def, params) {
-    return callApi(action, params||{}).then(function(d){
-      S[key] = Array.isArray(d) ? d : (d && typeof d === 'object' && !Array.isArray(d) ? d : def);
-    }).catch(function(){ S[key] = def; });
-  }
   return Promise.all([
-    sc('getUtenti',           'utenti',           []),
-    sc('getOperatori',        'operatori',        []),
-    sc('getMansioni',         'mansioni',         []),
-    sc('getDebiti',           'debiti',           []),
-    sc('getTurniOperatori',   'turniOperatori',   []),
-    sc('getCompitiOperatori', 'compitiOperatori', []),
-    sc('getCompitiTipi',      'compitiTipi',      []),
-    sc('getRuoli',            'ruoli',            []),
-    sc('getPresenzeFisse',    'presenzeFisse',    []),
-    sc('getTestiOrdine',      'testiOrdine',      {}),
-    sc('getRuoliPermessi',    'ruoliPermessi',    []),
-    sc('getMonteFerie',       'monteFerie',       [], {}),
-    sc('getRichiesteAssenza', 'richiesteAssenza', [], {}),
-    sc('getNoteUtente',       'noteUtenti',       [], {}),
-  ]).then(function(){
-    showLoader(false);
-  }).catch(function(){
-    showLoader(false);
-  });
+    callApi('getUtenti').then(function(d){ S.utenti = d||[]; }),
+    callApi('getOperatori').then(function(d){ S.operatori = d||[]; }),
+    callApi('getMansioni').then(function(d){ S.mansioni = d||[]; }),
+    callApi('getDebiti').then(function(d){ S.debiti = d||[]; }),
+    callApi('getTurniOperatori').then(function(d){ S.turniOperatori = d||[]; }),
+    callApi('getCompitiOperatori').then(function(d){ S.compitiOperatori = d||[]; }),
+    callApi('getCompitiTipi').then(function(d){ S.compitiTipi = d||[]; }),
+    callApi('getRuoli').then(function(d){ S.ruoli = d||[]; }),
+    callApi('getPresenzeFisse').then(function(d){ S.presenzeFisse = d||[]; }),
+    callApi('getTestiOrdine').then(function(d){ S.testiOrdine = d||{}; }),
+    callApi('getRuoliPermessi').then(function(d){ S.ruoliPermessi = d||[]; }),
+    callApi('getMonteFerie',{}).then(function(d){ S.monteFerie = d||[]; }),
+    callApi('getRichiesteAssenza',{}).then(function(d){ S.richiesteAssenza = d||[]; }),
+    callApi('getNoteUtente',{}).then(function(d){ S.noteUtenti = d||[]; }),
+  ]).catch(function(e){ toast('Errore caricamento: '+e.message,'error'); })
+    .finally(function(){ showLoader(false); });
 }
 
-// ===================================================================
-//  NAVIGATION HELPERS
-// ===================================================================
-function toggleGroup(groupId) {
-  var group = document.getElementById(groupId);
-  if (!group) return;
-  group.classList.toggle('open');
-}
-
-function openGroupForPage(page) {
-  var map = {
-    'dashboard':'group-panoramica','utenti':'group-anagrafica',
-    'operatori':'group-anagrafica','mansioni':'group-anagrafica',
-    'calendario':'group-pianificazione','turni':'group-pianificazione',
-    'presenze':'group-pianificazione','compiti':'group-pianificazione',
-    'ruoli':'group-pianificazione','sostituzioni':'group-gestione',
-    'debiti':'group-gestione','presenze_op':'group-gestione',
-    'testi':'group-gestione','permessi':'group-admin',
-    'log':'group-admin','report':'group-report',
-  };
-  var groupId = map[page];
-  if (groupId) {
-    var group = document.getElementById(groupId);
-    if (group && !group.classList.contains('open')) group.classList.add('open');
-  }
-}
-
-function toggleSidebar() {
-  var s = document.querySelector('.sidebar');
-  var o = document.getElementById('sidebarOverlay');
-  if (s) s.classList.toggle('open');
-  if (o) o.classList.toggle('show');
-}
-
-function closeSidebar() {
-  var s = document.querySelector('.sidebar');
-  var o = document.getElementById('sidebarOverlay');
-  if (s) s.classList.remove('open');
-  if (o) o.classList.remove('show');
-}
-
-function showLoader(show) {
-  var el = document.getElementById('loadingOverlay');
-  if (!el) return;
-  if (show) el.classList.add('show'); else el.classList.remove('show');
-}
-
-function toast(msg, type) {
-  var c = document.getElementById('toastContainer');
-  if (!c) return;
-  var t = document.createElement('div');
-  t.className = 'toast' + (type ? ' ' + type : '');
-  t.textContent = msg;
-  c.appendChild(t);
-  setTimeout(function(){ if (t.parentNode) t.parentNode.removeChild(t); }, 3500);
-}
-
-function filterTable(val, tableId) {
-  var table = document.getElementById(tableId);
-  if (!table) return;
-  var rows = table.querySelectorAll('tbody tr');
-  var v = val.toLowerCase();
-  rows.forEach(function(row){
-    row.style.display = row.textContent.toLowerCase().indexOf(v) >= 0 ? '' : 'none';
-  });
-}
-
-function openModal(title, bodyHtml, footerButtons) {
-  document.getElementById('modalTitle').textContent = title;
-  document.getElementById('modalBody').innerHTML = bodyHtml;
-  var footer = document.getElementById('modalFooter');
-  footer.innerHTML = '';
-  if (Array.isArray(footerButtons)) {
-    footerButtons.forEach(function(btn) {
-      var b = document.createElement('button');
-      b.className = 'btn ' + (btn.cls || 'btn-ghost');
-      b.textContent = btn.label || '';
-      if (btn.action === 'closeModal' || btn.action === 'close') {
-        b.onclick = function(){ closeModal(); };
-      } else if (typeof btn.action === 'string') {
-        b.onclick = new Function(btn.action + '()');
-      } else if (typeof btn.action === 'function') {
-        b.onclick = btn.action;
-      }
-      footer.appendChild(b);
-    });
-  } else if (typeof footerButtons === 'string') {
-    footer.innerHTML = footerButtons;
-  }
-  document.getElementById('modalOverlay').classList.add('open');
-}
-
-function closeModal() {
-  document.getElementById('modalOverlay').classList.remove('open');
-}
-
-// ===================================================================
+// ═══════════════════════════════════════════════════════════════════
 //  NAVIGATION
-// ===================================================================
+// ═══════════════════════════════════════════════════════════════════
 function showPage(page) {
   // Verifica permessi — blocca accesso diretto
   if (page !== 'dashboard' && !canRead(page)) {
@@ -1633,14 +1626,7 @@ function showPage(page) {
 // ═══════════════════════════════════════════════════════════════════
 function renderDashboard() {
   var debitiAperti = S.debiti.filter(function(d){ return d.stato==='aperto'; }).length;
-  var offlineBanner = !proxyOk
-    ? '<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:8px;padding:10px 16px;margin-bottom:18px;display:flex;align-items:center;gap:10px">' +
-      '<span style="font-size:1.2rem">⚠️</span>' +
-      '<div><strong style="color:#92400E">Modalità offline</strong> — Il database non è raggiungibile. Stai vedendo dati di esempio. ' +
-      '<a href="javascript:location.reload()" style="color:#92400E;font-weight:700">Ricarica</a> per riprovare.</div></div>'
-    : '';
   document.getElementById('pageContent').innerHTML =
-    offlineBanner +
     '<div class="stats-row">' +
     statCard('👤','Utenti Attivi',S.utenti.length,'#EEF4FB') +
     statCard('🧑‍⚕️','Operatori',S.operatori.length,'#E2F4E2') +
@@ -2675,7 +2661,7 @@ function showGeneraTurniModal() {
 function doGeneraTurni() {
   var modello = getVal('gt_modello');
   var rotSeq = ['Mattina','Pomeriggio','Notte','Riposo'];
-closeModal(); showLoader(true);
+  closeModal(); showLoader(true);
 
   var saves = [];
   S.settimane.forEach(function(sett, si) {
