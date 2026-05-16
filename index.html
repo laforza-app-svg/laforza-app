@@ -3291,53 +3291,81 @@ function setFormat(fmt, btn) {
 }
 
 function buildCalendarPrintArea() {
-  var sett = S.settimane.find(function(s){ return s.id===S.currentSettimana; }) || {};
-  var giorni = ['LUN','MAR','MER','GIO','VEN','SAB','DOM'];
+  var sett    = S.settimane.find(function(s){ return s.id===S.currentSettimana; }) || {};
+  var GIORNI  = ['LUN','MAR','MER','GIO','VEN','SAB','DOM'];
+  var GKEYS   = ['lun','mar','mer','gio','ven','sab','dom'];
   var calRows = S.calendario.filter(function(r){ return r.settimana_id===S.currentSettimana; });
-  
-  var perZona = {};
+
+  // Costruisci mappa mansione -> giorno -> [nomi utenti]
+  var mansioneMap = {};
   calRows.forEach(function(r) {
-    if (!perZona[r.zona]) perZona[r.zona] = {};
-    perZona[r.zona][r.giorno] = r;
+    GIORNI.forEach(function(g, gi) {
+      var val = r[GKEYS[gi]] || '';
+      if (!val) return;
+      var mansioni = val.split('|').filter(function(m){ return m && m.trim(); });
+      mansioni.forEach(function(mans) {
+        mans = mans.trim();
+        if (!mans) return;
+        if (!mansioneMap[mans]) mansioneMap[mans] = {LUN:[],MAR:[],MER:[],GIO:[],VEN:[],SAB:[],DOM:[]};
+        var nome = r.utente_nome || '';
+        if (nome && mansioneMap[mans][g].indexOf(nome) < 0) mansioneMap[mans][g].push(nome);
+      });
+    });
   });
-  
+
+  var mansioni = Object.keys(mansioneMap).sort();
+
   var html = '<div id="calendarPrintArea" style="padding:0">' +
     '<div class="print-header" style="padding:16px 0 10px">' +
     '<h2 style="font-family:DM Serif Display,serif;color:#1A3A5C">Comunità La Forza — Calendario Settimanale</h2>' +
-    '<p style="color:#666">Settimana '+( sett.tipo||'')+'&nbsp;&nbsp;|&nbsp;&nbsp;Dal '+( sett.dal||'')+'  al  '+(sett.al||'')+
+    '<p style="color:#666">Settimana '+(sett.tipo||'')+'&nbsp;&nbsp;|&nbsp;&nbsp;Dal '+(sett.dal||'')+' al '+(sett.al||'')+
     '&nbsp;&nbsp;|&nbsp;&nbsp;Generato il '+new Date().toLocaleDateString('it-IT')+'</p>' +
-    '</div>' +
-    '<div class="cal-grid">' +
-    '<div class="cal-cell cal-head" style="font-size:.7rem">Zona / Mansione</div>';
-  
-  giorni.forEach(function(g){ html += '<div class="cal-cell cal-head">'+g+'</div>'; });
-  
-  Object.keys(perZona).forEach(function(zona) {
-    html += '<div class="cal-cell cal-zone">'+zona+'</div>';
-    giorni.forEach(function(g) {
-      var row = perZona[zona][g];
-      var nome = row ? (row.sostituto_nome||row.utente_nome||'—') : '—';
-      var style = (row && row.sostituto_nome) ? 'color:#92400E;font-style:italic' : '';
-      html += '<div class="cal-cell" style="text-align:center;font-size:.72rem;'+style+'">'+nome+'</div>';
-    });
-  });
-  
-  html += '</div>' +
-    '<div style="margin-top:30px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px">';
-  
-  // Firma operatori
-  var ops = S.operatori.slice(0,12);
-  ops.forEach(function(o) {
-    html += '<div style="border-bottom:1px solid #999;padding-bottom:4px;font-size:.8rem">' +
-      o.nome+'<br><small style="color:#999">Firma: _______________</small></div>';
-  });
-  html += '</div>' +
-    '<div style="margin-top:24px;text-align:right;font-size:.82rem">' +
-    '<b>La Responsabile</b><br>Dott.ssa Gessica Arancio<br>___________________________</div>' +
     '</div>';
-  
+
+  // Tabella stampa
+  html += '<table style="width:100%;border-collapse:collapse;font-size:.78rem">' +
+    '<thead><tr style="background:#1A3A5C;color:white">' +
+    '<th style="padding:6px 8px;text-align:left;min-width:120px">ZONA / MANSIONE</th>';
+  GIORNI.forEach(function(g){ html += '<th style="padding:6px 8px;text-align:center">'+g+'</th>'; });
+  html += '</tr></thead><tbody>';
+
+  mansioni.forEach(function(mans, i) {
+    html += '<tr style="'+(i%2===0?'background:#f9f9f9':'')+'">';
+    html += '<td style="padding:5px 8px;font-weight:600;border:0.5px solid #ddd">'+mans+'</td>';
+    GIORNI.forEach(function(g) {
+      var utenti = mansioneMap[mans][g] || [];
+      html += '<td style="padding:4px 6px;text-align:center;border:0.5px solid #ddd;vertical-align:top">';
+      if (utenti.length === 0) {
+        html += '<span style="color:#ccc">—</span>';
+      } else {
+        html += utenti.map(function(u){ return '<div style="font-size:.7rem">'+u+'</div>'; }).join('');
+      }
+      html += '</td>';
+    });
+    html += '</tr>';
+  });
+
+  html += '</tbody></table>';
+
+  // Note utenti
+  var noteWeek = S.noteUtenti.filter(function(n){ return n.settimana_id===S.currentSettimana; });
+  if (noteWeek.length > 0) {
+    html += '<div style="margin-top:12px;padding:8px 12px;background:#FFFDE7;border:1px solid #E6B800">' +
+      '<b>Note:</b><br>';
+    noteWeek.forEach(function(n) {
+      var u = S.utenti.find(function(x){ return x.id===n.utente_id; });
+      html += '<div style="font-size:.8rem;margin-top:3px">' +
+        (n.tipo==='avviso'?'⚠️':n.tipo==='punizione'?'🚫':n.tipo==='premio'?'🌟':'📝') +
+        ' <b>'+(u?u.nome:n.utente_id)+'</b>: '+n.nota+'</div>';
+    });
+    html += '</div>';
+  }
+
+  html += '<div style="margin-top:10px;font-size:.7rem;color:#999;text-align:right">Realizzazione: www.apwebradiosocialtv.it | © La Forza 2026</div>';
+  html += '</div>';
   return html;
 }
+
 
 function printCalendar() {
   if (!S.currentSettimana) { toast('Seleziona prima una settimana','error'); return; }
