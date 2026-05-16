@@ -2498,10 +2498,10 @@ var GIORNI = ['LUN','MAR','MER','GIO','VEN','SAB','DOM'];
 
 function renderTurniOperatori() {
   document.getElementById('topbarActions').innerHTML =
-'<button class="btn btn-ghost" onclick="showGeneraModal()">📅 Genera Settimane</button>' +
-'<button class="btn btn-success" onclick="showGeneraTurniModal()">✨ Genera Turni Mensili</button>' +
-'<button class="btn btn-primary" onclick="openTurnoForm()">+ Aggiungi Turno</button>' +
-'<button class="btn btn-ghost" onclick="printTurniOperatori()">🖨️ Stampa</button>';
+    '<button class="btn btn-ghost" onclick="showGeneraModal()">📅 Genera Settimane</button>' +
+    '<button class="btn btn-success" onclick="showGeneraTurniModal()">✨ Genera Turni Mensili</button>' +
+    '<button class="btn btn-primary" onclick="openTurnoForm()">+ Aggiungi Turno</button>' +
+    '<button class="btn btn-ghost" onclick="printTurniOperatori()">🖨️ Stampa</button>';
 
   var sett = S.settimane.find(function(s){ return s.id===S.currentSettimana; }) || {};
 
@@ -3759,47 +3759,46 @@ function buildCalendarPrintArea() {
   legenda.forEach(function(l){ html += '<span style="background:'+l.bg+';color:'+l.fg+';padding:2px 7px;border-radius:3px;font-weight:600">'+l.l+'</span>'; });
   html += '</div>';
 
-  // Tabella per utente
+  // Tabella per MANSIONE (righe) x GIORNO (colonne) - nomi utenti nelle celle
+  // Costruisci mappa mansione -> giorno -> [nomi utenti]
+  var mansioneMap = {};
+  calRows.forEach(function(r) {
+    GKEYS.forEach(function(gk, gi) {
+      var val = r[gk] || '';
+      var mansioni = val.split('|').filter(function(m){ return m && m.trim(); });
+      mansioni.forEach(function(m) {
+        m = m.trim(); if (!m) return;
+        if (!mansioneMap[m]) mansioneMap[m] = {};
+        var g = GIORNI[gi];
+        if (!mansioneMap[m][g]) mansioneMap[m][g] = [];
+        var nome = r.utente_nome || r.utente_id || '';
+        if (nome && mansioneMap[m][g].indexOf(nome) < 0) mansioneMap[m][g].push(nome);
+      });
+    });
+  });
+
+  var mansioniOrdinati = Object.keys(mansioneMap).sort();
+
   html += '<table style="width:100%;border-collapse:collapse;font-size:.72rem">';
   html += '<thead><tr style="background:#1A3A5C;color:white">';
-  html += '<th style="padding:5px 7px;text-align:left;min-width:120px;border:1px solid #1A3A5C">Nominativo</th>';
+  html += '<th style="padding:5px 7px;text-align:left;min-width:160px;border:1px solid #1A3A5C">Mansione / Zona</th>';
   GLABELS.forEach(function(g,i){
     html += '<th style="padding:5px 4px;text-align:center;border:1px solid #1A3A5C">'+g+'<br><span style="font-size:.6rem;opacity:.7">'+dateGiorni[i]+'</span></th>';
   });
   html += '</tr></thead><tbody>';
 
-  var fasciaColors = {'F1':'#FFF8E7','F2':'#EEF4FB','F3':'#E2F4E2'};
-  var fasciaStars  = {'F1':'★','F2':'★★★','F3':'★★★★★'};
-
-  calRows.forEach(function(r,ri) {
-    var u = S.utenti.find(function(x){ return x.id===r.utente_id; }) || {};
-    var fascia = u.fascia || 'F1';
-    html += '<tr style="'+(ri%2===0?'background:#fafafa':'')+'">';
-    html += '<td style="padding:4px 6px;border:0.5px solid #ddd;background:'+(fasciaColors[fascia]||'#fff')+';vertical-align:middle">';
-    html += '<div style="font-weight:700;font-size:.78rem">'+(r.utente_nome||r.utente_id||'')+'</div>';
-    html += '<div style="font-size:.6rem;color:#888">'+fascia+' '+(fasciaStars[fascia]||'')+'</div></td>';
-    GKEYS.forEach(function(gk) {
-      var val = r[gk] || '';
-      var mansioni = val.split('|').filter(function(m){ return m&&m.trim(); });
+  mansioniOrdinati.forEach(function(mansione, mi) {
+    var col = getColore(mansione);
+    html += '<tr style="'+(mi%2===0?'background:#fafafa':'')+'">';
+    html += '<td style="padding:4px 7px;border:0.5px solid #ddd;background:'+col.bg+';color:'+col.fg+';font-weight:700;font-size:.75rem;vertical-align:middle">'+mansione+'</td>';
+    GIORNI.forEach(function(g) {
+      var nomi = mansioneMap[mansione][g] || [];
       html += '<td style="padding:2px 3px;border:0.5px solid #ddd;vertical-align:top;text-align:center">';
-      if (!mansioni.length) {
-        html += '<span style="color:#ddd;font-size:.65rem">Free</span>';
+      if (!nomi.length) {
+        html += '<span style="color:#ddd;font-size:.65rem">—</span>';
       } else {
-        mansioni.forEach(function(m) {
-          m = m.trim(); if (!m) return;
-          var col = getColore(m);
-          var label = m.replace('Apparecchio-Sparecchio / Pulizia Sala Mensa','App./Sparecchio')
-            .replace('Sala Terapeutico-Riabilitativa / Sala Relax','Sala Relax')
-            .replace('Turno Lavanderia Mattina','Lav. Mattina')
-            .replace('Turno Lavanderia Pomeriggio','Lav. Pomerigg.')
-            .replace('Pranzo / Cena / Colazione / Merende','Pranzo/Cena')
-            .replace('Atrio Esterno / Entrata / Cortile','Atrio')
-            .replace('Campo Pallavolo / Scala Antincendio','Campo/Scala')
-            .replace('Responsabile Manutenzione Generale','Resp.Manut.')
-            .replace('Responsabile Lavanderia','Resp.Lavand.')
-            .replace('Responsabile Igiene','Resp.Igiene')
-            .replace('Resp. Raccolta Differenziata','Differenz.');
-          html += '<div style="background:'+col.bg+';color:'+col.fg+';border-radius:3px;padding:1px 3px;margin:1px 0;font-size:.63rem;font-weight:600">'+label+'</div>';
+        nomi.forEach(function(nome) {
+          html += '<div style="font-size:.65rem;font-weight:600;padding:1px 2px;border-bottom:1px solid #eee">'+nome+'</div>';
         });
       }
       html += '</td>';
