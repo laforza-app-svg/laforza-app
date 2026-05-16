@@ -1151,7 +1151,7 @@ var isAppsScript = false; // GitHub Pages + Cloudflare proxy mode
 var callApi = api;
 
 // ===================================================================
-//  FORM HELPERS
+//  FORM & UI HELPERS
 // ===================================================================
 function field(id, label, defaultVal, required, type, options, selectedVal) {
   type = type || 'text';
@@ -1239,9 +1239,7 @@ function switchTab(el, panelId) {
   if (panel) panel.classList.add('active');
 }
 
-function esc(s) {
-  return (s||'').replace(/'/g, '').replace(/"/g, '');
-}
+function esc(s) { return (s||'').replace(/'/g,'').replace(/"/g,''); }
 
 function toggleGroup(groupId) {
   var group = document.getElementById(groupId);
@@ -1256,8 +1254,7 @@ function openGroupForPage(page) {
     'calendario':'group-pianificazione','turni':'group-pianificazione',
     'presenze':'group-pianificazione','compiti':'group-pianificazione',
     'ruoli':'group-pianificazione','sostituzioni':'group-gestione',
-    'debiti':'group-gestione','presenze_op':'group-gestione',
-    'testi':'group-gestione','permessi':'group-admin',
+    'debiti':'group-gestione','permessi':'group-admin',
     'log':'group-admin','report':'group-report',
   };
   var groupId = map[page];
@@ -1552,23 +1549,58 @@ window.addEventListener('load', function() {
 
 function loadAll() {
   showLoader(true);
+  function sc(action, key, def, params) {
+    return callApi(action, params||{}).then(function(d){
+      S[key] = Array.isArray(d) ? d : (d && typeof d === 'object' && !Array.isArray(d) ? d : def);
+    }).catch(function(){ S[key] = def; });
+  }
   return Promise.all([
-    callApi('getUtenti').then(function(d){ S.utenti = d||[]; }),
-    callApi('getOperatori').then(function(d){ S.operatori = d||[]; }),
-    callApi('getMansioni').then(function(d){ S.mansioni = d||[]; }),
-    callApi('getDebiti').then(function(d){ S.debiti = d||[]; }),
-    callApi('getTurniOperatori').then(function(d){ S.turniOperatori = d||[]; }),
-    callApi('getCompitiOperatori').then(function(d){ S.compitiOperatori = d||[]; }),
-    callApi('getCompitiTipi').then(function(d){ S.compitiTipi = d||[]; }),
-    callApi('getRuoli').then(function(d){ S.ruoli = d||[]; }),
-    callApi('getPresenzeFisse').then(function(d){ S.presenzeFisse = d||[]; }),
-    callApi('getTestiOrdine').then(function(d){ S.testiOrdine = d||{}; }),
-    callApi('getRuoliPermessi').then(function(d){ S.ruoliPermessi = d||[]; }),
-    callApi('getMonteFerie',{}).then(function(d){ S.monteFerie = d||[]; }),
-    callApi('getRichiesteAssenza',{}).then(function(d){ S.richiesteAssenza = d||[]; }),
-    callApi('getNoteUtente',{}).then(function(d){ S.noteUtenti = d||[]; }),
-  ]).catch(function(e){ toast('Errore caricamento: '+e.message,'error'); })
-    .finally(function(){ showLoader(false); });
+    sc('getUtenti',           'utenti',           []),
+    sc('getOperatori',        'operatori',        []),
+    sc('getMansioni',         'mansioni',         []),
+    sc('getDebiti',           'debiti',           []),
+    sc('getTurniOperatori',   'turniOperatori',   []),
+    sc('getCompitiOperatori', 'compitiOperatori', []),
+    sc('getCompitiTipi',      'compitiTipi',      []),
+    sc('getRuoli',            'ruoli',            []),
+    sc('getPresenzeFisse',    'presenzeFisse',    []),
+    sc('getTestiOrdine',      'testiOrdine',      {}),
+    sc('getRuoliPermessi',    'ruoliPermessi',    []),
+    sc('getMonteFerie',       'monteFerie',       [], {}),
+    sc('getRichiesteAssenza', 'richiesteAssenza', [], {}),
+    sc('getNoteUtente',       'noteUtenti',       [], {}),
+  ]).then(function(){
+    // Carica automaticamente il calendario esistente dal DB
+    return callApi('getCalendario', {}).then(function(d) {
+      S.calendario = Array.isArray(d) ? d : [];
+      // Costruisci lista settimane dalle righe calendario
+      var settimaneMap = {};
+      S.calendario.forEach(function(r) {
+        if (!r.settimana_id) return;
+        if (!settimaneMap[r.settimana_id]) {
+          settimaneMap[r.settimana_id] = { id: r.settimana_id, label: r.settimana_id, tipo:'B', dal:'', al:'' };
+        }
+        if (r.dal && r.al) {
+          var dalStr = formatDataLeggibile(r.dal);
+          var alStr  = formatDataLeggibile(r.al);
+          if (dalStr && alStr) {
+            settimaneMap[r.settimana_id].dal  = dalStr;
+            settimaneMap[r.settimana_id].al   = alStr;
+            settimaneMap[r.settimana_id].tipo = r.tipo || 'B';
+            settimaneMap[r.settimana_id].label = (r.tipo||'Sett.') + ' ' + dalStr + ' - ' + alStr;
+          }
+        }
+      });
+      S.settimane = Object.values(settimaneMap).sort(function(a,b){ return a.id > b.id ? 1 : -1; });
+      if (S.settimane.length > 0 && !S.currentSettimana) {
+        S.currentSettimana = S.settimane[0].id;
+      }
+    }).catch(function(){ S.calendario = []; S.settimane = []; });
+  }).then(function(){
+    showLoader(false);
+  }).catch(function(){
+    showLoader(false);
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -2731,35 +2763,36 @@ function doGeneraTurni() {
 
 function printTurniOperatori() {
   var sett = S.settimane.find(function(s){ return s.id===S.currentSettimana; }) || {};
-  var css = '<style>@page{size:A4 landscape;margin:12mm}body{font-family:Arial,sans-serif;font-size:9pt}' +
-    'table{width:100%;border-collapse:collapse}' +
-    'th{background:#1A3A5C;color:white;padding:5pt;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
-    'td{border:1pt solid #ccc;padding:4pt;text-align:center}' +
-    '.m{background:#DBEAFE;color:#1E40AF;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
-    '.p{background:#FEF3C7;color:#92400E;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
-    '.n{background:#1A3A5C;color:white;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
-    '.r{background:#D1FAE5;color:#065F46;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
-    '</style>';
-  var html = css + '<h2 style="text-align:center;margin-bottom:4pt">Comunità La Forza — Turni Operatori</h2>' +
-    '<p style="text-align:center;margin-bottom:10pt">Settimana '+sett.tipo+' &nbsp;|&nbsp; '+sett.dal+' – '+sett.al+'</p>' +
-    '<table><thead><tr><th>Operatore</th>';
-  GIORNI.forEach(function(g){ html += '<th>'+g+'</th>'; });
+  var html = '<div style="font-family:Arial,sans-serif;font-size:9pt">';
+  html += '<div class="no-print" style="position:sticky;top:0;background:white;padding:10px;border-bottom:2px solid #1A3A5C;display:flex;gap:10px;align-items:center;z-index:100">';
+  html += '<button onclick="chiudiStampa()" style="padding:8px 18px;background:#666;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px">← Chiudi</button>';
+  html += '<button onclick="window.print()" style="padding:8px 18px;background:#1A3A5C;color:white;border:none;border-radius:6px;cursor:pointer;font-size:14px">🖨️ Stampa</button>';
+  html += '<span style="font-weight:700;font-size:1rem;color:#1A3A5C">Turni Operatori — Settimana '+(sett.tipo||'')+' '+( sett.dal||'')+' – '+(sett.al||'')+'</span>';
+  html += '</div>';
+  html += '<div style="padding:20px">';
+  html += '<table style="width:100%;border-collapse:collapse">';
+  html += '<thead><tr style="background:#1A3A5C;color:white"><th style="padding:6px;text-align:left">Operatore</th>';
+  GIORNI.forEach(function(g){ html += '<th style="padding:6px;text-align:center">'+g+'</th>'; });
   html += '</tr></thead><tbody>';
-  S.operatori.forEach(function(op) {
-    html += '<tr><td style="text-align:left;font-weight:bold">'+op.nome+'</td>';
+  S.operatori.forEach(function(op, i) {
+    html += '<tr style="background:'+(i%2===0?'#f9fafb':'white')+'">';
+    html += '<td style="padding:5px 8px;font-weight:bold;border:1px solid #ddd">'+op.nome+'</td>';
     GIORNI.forEach(function(g) {
       var t = S.turniOperatori.find(function(x){ return x.operatore_id===op.id&&x.giorno===g&&x.settimana_id===S.currentSettimana; });
       var v = t?t.turno:'—';
-      var cls = v==='Mattina'?'m':v==='Pomeriggio'?'p':v==='Notte'?'n':v==='Riposo'?'r':'';
-      html += '<td class="'+cls+'"><b>'+v+'</b></td>';
+      var bg = v==='Mattina'?'#DBEAFE':v==='Pomeriggio'?'#FEF3C7':v==='Notte'?'#1A3A5C':v==='Riposo'?'#D1FAE5':'#f3f4f6';
+      var fg = v==='Notte'?'white':'#333';
+      html += '<td style="padding:4px;text-align:center;border:1px solid #ddd;background:'+bg+';color:'+fg+';font-weight:600">'+v+'</td>';
     });
     html += '</tr>';
   });
-  html += '</tbody></table>';
-  var w = window.open('','_blank','width=1200,height=800');
-  w.document.write('<!DOCTYPE html><html><head><title>Turni Operatori</title></head><body>'+html+'</'+'script></body></html>');
-  w.document.close(); w.focus();
-  setTimeout(function(){ w.print(); }, 600);
+  html += '</tbody></table></div></div>';
+  document.getElementById('pageContent').innerHTML = html;
+  S._prevPage = S.currentPage;
+}
+
+function chiudiStampa() {
+  showPage(S._prevPage || 'turni');
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -3013,7 +3046,7 @@ function printCompitiOperatori() {
     html += '</tr>';
   });
   html += '</tbody></table>';
-  var w = window.open('','_blank');
+  var w = window.open('','_blank','width=1200,height=800');
   w.document.write('<!DOCTYPE html><html><head><title>Compiti Operatori</title></head><body>'+html+'</body></html>');
   w.document.close(); w.focus();
   setTimeout(function(){ w.print(); }, 600);
@@ -3685,7 +3718,6 @@ function selectSettimanaReport(settId) {
 }
 
 function stampaPDF() {
-  // Applica formato pagina corretto via CSS @page
   var fmt = currentFormat || 'a4-landscape';
   var pageCSS = {
     'a4-landscape': '@page { size: A4 landscape; margin: 10mm; }',
@@ -3693,7 +3725,6 @@ function stampaPDF() {
     'a3-landscape': '@page { size: A3 landscape; margin: 10mm; }',
     'a3-portrait':  '@page { size: A3 portrait;  margin: 10mm; }',
   };
-  // Inserisci stile @page dinamico
   var styleEl = document.getElementById('printPageStyle');
   if (!styleEl) {
     styleEl = document.createElement('style');
@@ -3705,6 +3736,10 @@ function stampaPDF() {
     ' .main { margin-left: 0 !important; }' +
     ' body { background: white !important; }';
   window.print();
+  // Dopo stampa, rimuovi lo stile per non alterare il layout
+  setTimeout(function(){
+    if (styleEl && styleEl.parentNode) styleEl.parentNode.removeChild(styleEl);
+  }, 2000);
 }
 
 function setFormat(fmt, btn) {
@@ -3759,15 +3794,13 @@ function buildCalendarPrintArea() {
   legenda.forEach(function(l){ html += '<span style="background:'+l.bg+';color:'+l.fg+';padding:2px 7px;border-radius:3px;font-weight:600">'+l.l+'</span>'; });
   html += '</div>';
 
-  // Tabella per MANSIONE (righe) x GIORNO (colonne) - nomi utenti nelle celle
-  // Costruisci mappa mansione -> giorno -> [nomi utenti]
+  // Tabella MANSIONI a sinistra, GIORNI nelle colonne, NOMI UTENTI nelle celle
   var mansioneMap = {};
   calRows.forEach(function(r) {
     GKEYS.forEach(function(gk, gi) {
       var val = r[gk] || '';
-      var mansioni = val.split('|').filter(function(m){ return m && m.trim(); });
-      mansioni.forEach(function(m) {
-        m = m.trim(); if (!m) return;
+      val.split('|').filter(function(m){ return m && m.trim(); }).forEach(function(m) {
+        m = m.trim();
         if (!mansioneMap[m]) mansioneMap[m] = {};
         var g = GIORNI[gi];
         if (!mansioneMap[m][g]) mansioneMap[m][g] = [];
@@ -3776,9 +3809,7 @@ function buildCalendarPrintArea() {
       });
     });
   });
-
   var mansioniOrdinati = Object.keys(mansioneMap).sort();
-
   html += '<table style="width:100%;border-collapse:collapse;font-size:.72rem">';
   html += '<thead><tr style="background:#1A3A5C;color:white">';
   html += '<th style="padding:5px 7px;text-align:left;min-width:160px;border:1px solid #1A3A5C">Mansione / Zona</th>';
@@ -3786,7 +3817,6 @@ function buildCalendarPrintArea() {
     html += '<th style="padding:5px 4px;text-align:center;border:1px solid #1A3A5C">'+g+'<br><span style="font-size:.6rem;opacity:.7">'+dateGiorni[i]+'</span></th>';
   });
   html += '</tr></thead><tbody>';
-
   mansioniOrdinati.forEach(function(mansione, mi) {
     var col = getColore(mansione);
     html += '<tr style="'+(mi%2===0?'background:#fafafa':'')+'">';
@@ -3829,8 +3859,15 @@ function buildCalendarPrintArea() {
   if (ruoliKeys2.length > 0) {
     html += '<div style="margin-top:14px;padding:10px 14px;border:2px solid #333;font-size:.82rem;line-height:1.9">';
     ruoliKeys2.forEach(function(ruolo) {
-      html += '<div style="font-weight:700;text-decoration:underline">'+ruolo.toUpperCase()+
-        ': <span style="background:yellow;padding:1px 6px">'+ruoliSett2[ruolo].join(' - ')+'</span></div>';
+      var nomeAttuale = (S._responsabiliOverride && S._responsabiliOverride[ruolo]) 
+        ? S._responsabiliOverride[ruolo] 
+        : ruoliSett2[ruolo].join(' - ');
+      html += '<div style="font-weight:700;text-decoration:underline;display:flex;align-items:center;gap:8px">'+
+        ruolo.toUpperCase()+': ' +
+        '<span style="background:yellow;padding:1px 6px" id="resp_'+ruolo.replace(/ /g,'_')+'">'+nomeAttuale+'</span>' +
+        '<button class="no-print" onclick="modificaResponsabile(''+ruolo+'')" ' +
+        'style="background:none;border:1px solid #999;border-radius:4px;padding:1px 6px;cursor:pointer;font-size:.75rem">✏️</button>' +
+        '</div>';
     });
     if (S.testiOrdine&&S.testiOrdine.chiusura_extra&&S.testiOrdine.chiusura_extra.trim()) {
       html += '<div style="margin-top:6px;padding-top:6px;border-top:1px solid #ccc;font-weight:700">'+
@@ -3846,6 +3883,37 @@ function buildCalendarPrintArea() {
   html += '</div>';
   return html;
 }
+
+// ===================================================================
+//  MODIFICA MANUALE RESPONSABILI SETTIMANALI
+// ===================================================================
+if (!S._responsabiliOverride) S._responsabiliOverride = {};
+
+function modificaResponsabile(ruolo) {
+  var optsUtenti = S.utenti.map(function(u){ return {v:u.nome, l:u.nome}; });
+  var attuale = S._responsabiliOverride[ruolo] || '';
+  openModal('✏️ Modifica Responsabile',
+    '<p style="margin-bottom:12px;color:var(--gray4);font-size:.88rem">Ruolo: <b>'+ruolo+'</b></p>' +
+    field('resp_nome','Nome Responsabile', attuale) +
+    '<div class="form-group"><label class="form-label">Oppure scegli dalla lista utenti</label>' +
+    selField('resp_utente', optsUtenti, attuale) + '</div>',
+    [{label:'Annulla',cls:'btn-ghost',action:'closeModal()'},
+     {label:'Salva',cls:'btn-primary',action:'salvaResponsabile("'+ruolo+'")'}]
+  );
+}
+
+function salvaResponsabile(ruolo) {
+  var nome = getVal('resp_nome') || getVal('resp_utente');
+  if (!nome) { toast('Inserisci un nome','error'); return; }
+  if (!S._responsabiliOverride) S._responsabiliOverride = {};
+  S._responsabiliOverride[ruolo] = nome.toUpperCase();
+  // Aggiorna display
+  var el = document.getElementById('resp_'+ruolo.replace(/ /g,'_'));
+  if (el) el.textContent = nome.toUpperCase();
+  closeModal();
+  toast('Responsabile aggiornato ✓','success');
+}
+
 </script>
 </body>
 </html>
