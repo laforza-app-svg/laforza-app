@@ -3866,15 +3866,15 @@ function buildCalendarPrintArea() {
   if (ruoliKeys2.length > 0) {
     html += '<div style="margin-top:14px;padding:10px 14px;border:2px solid #333;font-size:.82rem;line-height:1.9">';
     ruoliKeys2.forEach(function(ruolo) {
-      var nomeAttuale = (S._responsabiliOverride && S._responsabiliOverride[ruolo]) 
-        ? S._responsabiliOverride[ruolo] 
+      var nomeAttuale = (S._responsabiliOverride && S._responsabiliOverride[ruolo])
+        ? S._responsabiliOverride[ruolo]
         : ruoliSett2[ruolo].join(' - ');
-      html += '<div style="font-weight:700;text-decoration:underline;display:flex;align-items:center;gap:8px">'+
-        ruolo.toUpperCase()+': ' +
-        '<span style="background:yellow;padding:1px 6px" id="resp_'+ruolo.replace(/ /g,'_')+'">'+nomeAttuale+'</span>' +
-        '<button class="no-print" style="background:none;border:1px solid #999;border-radius:4px;padding:1px 6px;cursor:pointer;font-size:.75rem" ' +
-        'id="btnresp_' + ruolo.replace(/ /g,'_') + '">✏️</button>' +
-        '</div>';
+      var rid = ruolo.replace(/ /g,'_');
+      html += '<div style="font-weight:700;text-decoration:underline;display:flex;align-items:center;gap:8px">';
+      html += ruolo.toUpperCase() + ': ';
+      html += '<span style="background:yellow;padding:1px 6px" id="resp_' + rid + '">' + nomeAttuale + '</span>';
+      html += '<button class="no-print" style="background:none;border:1px solid #999;border-radius:4px;padding:1px 6px;cursor:pointer;font-size:.75rem" id="btnresp_' + rid + '">[mod]</button>';
+      html += '</div>';
     });
     if (S.testiOrdine&&S.testiOrdine.chiusura_extra&&S.testiOrdine.chiusura_extra.trim()) {
       html += '<div style="margin-top:6px;padding-top:6px;border-top:1px solid #ccc;font-weight:700">'+
