@@ -3701,6 +3701,13 @@ function renderReport() {
   }
   
   document.getElementById('pageContent').innerHTML = html;
+  // Aggiungi event listener sui bottoni responsabili
+  document.querySelectorAll('[id^="btnresp_"]').forEach(function(btn) {
+    btn.onclick = function() {
+      var ruoloId = btn.id.replace('btnresp_','').replace(/_/g,' ');
+      modificaResponsabile(ruoloId);
+    };
+  });
 }
 
 var currentFormat = 'a4-landscape';
@@ -3865,8 +3872,8 @@ function buildCalendarPrintArea() {
       html += '<div style="font-weight:700;text-decoration:underline;display:flex;align-items:center;gap:8px">'+
         ruolo.toUpperCase()+': ' +
         '<span style="background:yellow;padding:1px 6px" id="resp_'+ruolo.replace(/ /g,'_')+'">'+nomeAttuale+'</span>' +
-        '<button class="no-print" onclick="modificaResponsabile(''+ruolo+'')" ' +
-        'style="background:none;border:1px solid #999;border-radius:4px;padding:1px 6px;cursor:pointer;font-size:.75rem">✏️</button>' +
+        '<button class="no-print" style="background:none;border:1px solid #999;border-radius:4px;padding:1px 6px;cursor:pointer;font-size:.75rem" ' +
+        'id="btnresp_' + ruolo.replace(/ /g,'_') + '">✏️</button>' +
         '</div>';
     });
     if (S.testiOrdine&&S.testiOrdine.chiusura_extra&&S.testiOrdine.chiusura_extra.trim()) {
@@ -3891,15 +3898,27 @@ if (!S._responsabiliOverride) S._responsabiliOverride = {};
 
 function modificaResponsabile(ruolo) {
   var optsUtenti = S.utenti.map(function(u){ return {v:u.nome, l:u.nome}; });
-  var attuale = S._responsabiliOverride[ruolo] || '';
-  openModal('✏️ Modifica Responsabile',
-    '<p style="margin-bottom:12px;color:var(--gray4);font-size:.88rem">Ruolo: <b>'+ruolo+'</b></p>' +
-    field('resp_nome','Nome Responsabile', attuale) +
-    '<div class="form-group"><label class="form-label">Oppure scegli dalla lista utenti</label>' +
-    selField('resp_utente', optsUtenti, attuale) + '</div>',
-    [{label:'Annulla',cls:'btn-ghost',action:'closeModal()'},
-     {label:'Salva',cls:'btn-primary',action:'salvaResponsabile("'+ruolo+'")'}]
-  );
+  var attuale = (S._responsabiliOverride && S._responsabiliOverride[ruolo]) ? S._responsabiliOverride[ruolo] : '';
+  var bodyHtml = '<p style="margin-bottom:12px;font-size:.88rem">Ruolo: <b>' + ruolo + '</b></p>' +
+    '<div class="form-group"><label class="form-label">Nome Responsabile</label>' +
+    '<input type="text" class="form-control" id="resp_nome" value="' + attuale + '"></div>' +
+    '<div class="form-group"><label class="form-label">Oppure scegli dalla lista</label>' +
+    selField('resp_utente', optsUtenti, attuale) + '</div>';
+  document.getElementById('modalTitle').textContent = 'Modifica Responsabile';
+  document.getElementById('modalBody').innerHTML = bodyHtml;
+  var footer = document.getElementById('modalFooter');
+  footer.innerHTML = '';
+  var btnAnnulla = document.createElement('button');
+  btnAnnulla.className = 'btn btn-ghost';
+  btnAnnulla.textContent = 'Annulla';
+  btnAnnulla.onclick = function(){ closeModal(); };
+  var btnSalva = document.createElement('button');
+  btnSalva.className = 'btn btn-primary';
+  btnSalva.textContent = 'Salva';
+  btnSalva.onclick = function(){ salvaResponsabile(ruolo); };
+  footer.appendChild(btnAnnulla);
+  footer.appendChild(btnSalva);
+  document.getElementById('modalOverlay').classList.add('open');
 }
 
 function salvaResponsabile(ruolo) {
