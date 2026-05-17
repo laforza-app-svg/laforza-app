@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- La Forza App v4.0 - Build 20260517-1800 -->
 <html lang="it">
 <head>
 <meta charset="UTF-8">
@@ -2436,8 +2437,8 @@ function renderRuoli() {
       '</td>' +
       '<td style="color:var(--gray4);font-size:.82rem">'+(r.note||'—')+'</td>' +
       '<td><div class="actions">' +
-      '<button class="btn btn-sm btn-ghost" onclick="openRuoloForm(\''+r.id+'\')">✏️</button>' +
-      '<button class="btn btn-sm btn-danger" onclick="deleteRuolo(\''+r.id+'\',\''+r.nome.replace(/'/g,'').replace(/"/g,'')+'\')">🗑</button>' +
+      '<button class="btn btn-sm btn-ghost" data-rid="'+r.id+'" onclick="openRuoloFormBtn(this)">✏️</button>' +
+      '<button class="btn btn-sm btn-danger" data-rid="'+r.id+'" data-rnome="'+r.nome.replace(/"/g,'')+'" onclick="deleteRuoloBtn(this)">🗑</button>' +
       '</div></td></tr>';
   });
 
@@ -2508,6 +2509,14 @@ function saveRuolo() {
     closeModal(); renderRuoli(); toast('Ruolo salvato ✓','success');
   }).catch(function(e){ toast('Errore: '+e.message,'error'); })
     .finally(function(){ showLoader(false); });
+}
+
+function openRuoloFormBtn(btn) {
+  openRuoloForm(btn.getAttribute('data-rid'));
+}
+
+function deleteRuoloBtn(btn) {
+  deleteRuolo(btn.getAttribute('data-rid'), btn.getAttribute('data-rnome'));
 }
 
 function deleteRuolo(id, nome) {
