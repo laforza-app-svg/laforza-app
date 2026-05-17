@@ -2013,6 +2013,7 @@ function renderCalGrid(settimanaId) {
     });
   });
 
+  window._calMansioni = [];
   var mansioni = Object.keys(mansioneMap).sort();
   if (mansioni.length === 0) return '<p style="color:var(--gray3);padding:20px;text-align:center">Nessuna mansione assegnata.</p>';
 
@@ -2032,8 +2033,15 @@ function renderCalGrid(settimanaId) {
           (r.utente_nome && (r[g.toLowerCase()] || '').indexOf(mans) >= 0 || 
            (r.lun||r.mar||r.mer||r.gio||r.ven||r.sab||r.dom||'').indexOf(mans) >= 0);
       });
+      // Salva la mansione in un array globale e usa l'indice
+      var mansIdx = window._calMansioni ? window._calMansioni.indexOf(mans) : -1;
+      if (mansIdx < 0) {
+        if (!window._calMansioni) window._calMansioni = [];
+        window._calMansioni.push(mans);
+        mansIdx = window._calMansioni.length - 1;
+      }
       html += '<td class="cal-cell" style="vertical-align:top;padding:3px;cursor:pointer" ' +
-        'data-mans="'+mans.replace(/"/g,'')+'" data-giorno="'+g+'" onclick="calCellaClick(this)">';
+        'data-midx="' + mansIdx + '" data-giorno="' + g + '" onclick="calCellaClick(this)">';
       utenti.forEach(function(u) {
         html += '<div style="font-size:.72rem;padding:1px 0">'+u+'</div>';
       });
@@ -2053,8 +2061,10 @@ function renderCalGrid(settimanaId) {
 
 
 function calCellaClick(el) {
-  var mansione = el.getAttribute('data-mans');
+  var mansIdx = parseInt(el.getAttribute('data-midx'));
   var giorno = el.getAttribute('data-giorno');
+  var mansione = window._calMansioni && window._calMansioni[mansIdx] ? window._calMansioni[mansIdx] : '';
+  if (!mansione) { toast('Errore: mansione non trovata','error'); return; }
   openCellaCalendarioModal(mansione, giorno);
 }
 
