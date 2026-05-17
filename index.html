@@ -2032,9 +2032,8 @@ function renderCalGrid(settimanaId) {
           (r.utente_nome && (r[g.toLowerCase()] || '').indexOf(mans) >= 0 || 
            (r.lun||r.mar||r.mer||r.gio||r.ven||r.sab||r.dom||'').indexOf(mans) >= 0);
       });
-      var mansEsc = mans.replace(/'/g,'').replace(/"/g,'');
       html += '<td class="cal-cell" style="vertical-align:top;padding:3px;cursor:pointer" ' +
-        'onclick="openCellaCalendarioModal(' + "'" + mansEsc + "'" + ',' + "'" + g + "'" + ')">';
+        'data-mans="'+mans.replace(/"/g,'')+'" data-giorno="'+g+'" onclick="calCellaClick(this)">';
       utenti.forEach(function(u) {
         html += '<div style="font-size:.72rem;padding:1px 0">'+u+'</div>';
       });
@@ -2052,6 +2051,12 @@ function renderCalGrid(settimanaId) {
   return html;
 }
 
+
+function calCellaClick(el) {
+  var mansione = el.getAttribute('data-mans');
+  var giorno = el.getAttribute('data-giorno');
+  openCellaCalendarioModal(mansione, giorno);
+}
 
 function openCellaCalendarioModal(mansione, giorno) {
   // Trova utenti assegnati a questa mansione in questo giorno
