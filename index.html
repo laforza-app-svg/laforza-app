@@ -2077,7 +2077,7 @@ function openCellaCalendarioModal(mansione, giorno) {
     var gk = giorno.toLowerCase();
     var val = r[gk] || '';
     if (val.indexOf(mansione) >= 0) {
-      assegnati.push({id: r.id, nome: r.utente_nome || r.utente_id});
+      assegnati.push({id: r.utente_id, rigaId: r.id, nome: r.utente_nome || r.utente_id});
     }
   });
 
@@ -2101,6 +2101,7 @@ function openCellaCalendarioModal(mansione, giorno) {
       btn.style.cssText = 'background:#FEE2E2;border:none;color:#C0392B;padding:3px 10px;border-radius:4px;cursor:pointer;font-weight:700';
       btn.textContent = 'X';
       btn.setAttribute('data-rid', a.id);
+      btn.setAttribute('data-rigaid', a.rigaId);
       btn.setAttribute('data-rnome', a.nome);
       btn.setAttribute('data-mans', mansione);
       btn.setAttribute('data-giorno', giorno);
@@ -2145,21 +2146,23 @@ function openCellaCalendarioModal(mansione, giorno) {
 
 function rimuoviUtenteCalendario(utenteId, utenteNome, mansione, giorno) {
   var gk = giorno.toLowerCase();
+  // Cerca per utente_id nella settimana corrente
   var riga = S.calendario.find(function(r){
-    return r.settimana_id === S.currentSettimana && r.utente_id === utenteId;
+    return r.settimana_id === S.currentSettimana && 
+           (r.utente_id === utenteId || r.utente_nome === utenteNome);
   });
   if (!riga) { toast('Utente non trovato nel calendario','error'); return; }
-  var valAttuale = riga[gk] || '';
-  // Rimuove la mansione dalla lista
-  var mansioni = valAttuale.split('|').filter(function(m){
+  var valAttuale = String(riga[gk] || '');
+  // Rimuove la mansione dalla lista pipe-separated
+  var mansioniList = valAttuale.split('|').filter(function(m){
     return m.trim() && m.trim() !== mansione.trim();
   });
-  riga[gk] = mansioni.join('|');
+  riga[gk] = mansioniList.join('|');
   showLoader(true);
   callApi('saveAssegnazione', riga).then(function(){
     closeModal();
     renderCalendario();
-    toast('Utente rimosso dalla mansione', 'success');
+    toast(utenteNome + ' rimosso da ' + mansione, 'success');
   }).catch(function(e){ toast('Errore: '+e.message,'error'); })
     .finally(function(){ showLoader(false); });
 }
