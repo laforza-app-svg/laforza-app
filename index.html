@@ -2026,13 +2026,24 @@ function renderCalGrid(settimanaId) {
     html += '<td class="cal-name"><b>'+mans+'</b></td>';
     GIORNI.forEach(function(g) {
       var utenti = mansioneMap[mans][g] || [];
+      // Trova le righe calendario per questa mansione e giorno
+      var calRows = S.calendario.filter(function(r){
+        return r.settimana_id === S.currentSettimana && r.giorno === g &&
+          (r.utente_nome && (r[g.toLowerCase()] || '').indexOf(mans) >= 0 || 
+           (r.lun||r.mar||r.mer||r.gio||r.ven||r.sab||r.dom||'').indexOf(mans) >= 0);
+      });
+      var mansEsc = mans.replace(/'/g,'').replace(/"/g,'');
+      html += '<td class="cal-cell" style="vertical-align:top;padding:3px;cursor:pointer" ' +
+        'onclick="openCellaCalendarioModal(' + "'" + mansEsc + "'" + ',' + "'" + g + "'" + ')">';
+      utenti.forEach(function(u) {
+        html += '<div style="font-size:.72rem;padding:1px 0">'+u+'</div>';
+      });
       if (utenti.length === 0) {
-        html += '<td class="cal-cell" style="color:var(--gray2);text-align:center">·</td>';
+        html += '<div style="color:var(--sky);font-size:.65rem;text-align:center">+ aggiungi</div>';
       } else {
-        html += '<td class="cal-cell">'+
-          utenti.map(function(u){ return '<div style="font-size:.72rem;padding:1px 0">'+u+'</div>'; }).join('')+
-          '</td>';
+        html += '<div style="color:var(--sky);font-size:.62rem;text-align:center;opacity:.7">+ modifica</div>';
       }
+      html += '</td>';
     });
     html += '</tr>';
   });
@@ -2041,6 +2052,90 @@ function renderCalGrid(settimanaId) {
   return html;
 }
 
+
+function openCellaCalendarioModal(mansione, giorno) {
+  // Trova utenti assegnati a questa mansione in questo giorno
+  var calRows = S.calendario.filter(function(r){ return r.settimana_id === S.currentSettimana; });
+  var assegnati = [];
+  calRows.forEach(function(r) {
+    var gk = giorno.toLowerCase();
+    var val = r[gk] || '';
+    if (val.indexOf(mansione) >= 0) {
+      assegnati.push({id: r.id, nome: r.utente_nome || r.utente_id});
+    }
+  });
+
+  var optsUtenti = S.utenti.map(function(u){ return {v:u.id+'|'+u.nome, l:u.nome}; });
+
+  var listaHtml = '<div style="margin-bottom:10px">';
+  if (assegnati.length === 0) {
+    listaHtml += '<p style="color:#999;font-size:.85rem">Nessun utente assegnato</p>';
+  } else {
+    assegnati.forEach(function(a) {
+      listaHtml += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">' +
+        '<span style="flex:1;background:#f3f4f6;padding:4px 8px;border-radius:4px;font-weight:600;font-size:.85rem">' + a.nome + '</span>' +
+        '</div>';
+    });
+  }
+  listaHtml += '</div>';
+
+  var bodyHtml = '<p style="margin-bottom:8px;font-size:.88rem"><b>' + mansione + '</b> — <b>' + giorno + '</b></p>' +
+    '<p style="font-size:.8rem;color:#666;margin-bottom:6px">Utenti assegnati:</p>' +
+    listaHtml +
+    '<hr style="margin:10px 0">' +
+    '<p style="font-size:.8rem;color:#666;margin-bottom:6px">Aggiungi utente:</p>' +
+    '<div class="form-group">' + selField('cal_utente', optsUtenti, '') + '</div>';
+
+  document.getElementById('modalTitle').textContent = 'Modifica Assegnazione';
+  document.getElementById('modalBody').innerHTML = bodyHtml;
+  var footer = document.getElementById('modalFooter');
+  footer.innerHTML = '';
+  var btnChiudi = document.createElement('button');
+  btnChiudi.className = 'btn btn-ghost';
+  btnChiudi.textContent = 'Chiudi';
+  btnChiudi.onclick = function(){ closeModal(); };
+  var btnAggiungi = document.createElement('button');
+  btnAggiungi.className = 'btn btn-success';
+  btnAggiungi.textContent = 'Aggiungi';
+  btnAggiungi.onclick = function(){ aggiungiUtenteCalendario(mansione, giorno); };
+  footer.appendChild(btnChiudi);
+  footer.appendChild(btnAggiungi);
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function aggiungiUtenteCalendario(mansione, giorno) {
+  var val = getVal('cal_utente');
+  if (!val) { toast('Seleziona un utente','error'); return; }
+  var parts = val.split('|');
+  var uId = parts[0];
+  var uNome = parts[1] || '';
+  var gk = giorno.toLowerCase();
+
+  // Trova la riga di questo utente in questa settimana
+  var riga = S.calendario.find(function(r){
+    return r.settimana_id === S.currentSettimana && r.utente_id === uId;
+  });
+
+  if (!riga) {
+    toast('Utente non trovato nel calendario','error');
+    return;
+  }
+
+  var valAttuale = riga[gk] || '';
+  if (valAttuale.indexOf(mansione) >= 0) {
+    toast('Utente già assegnato a questa mansione','error');
+    return;
+  }
+
+  riga[gk] = valAttuale ? valAttuale + '|' + mansione : mansione;
+  showLoader(true);
+  callApi('saveAssegnazione', riga).then(function(){
+    closeModal();
+    renderCalendario();
+    toast('Assegnazione aggiunta', 'success');
+  }).catch(function(e){ toast('Errore: '+e.message,'error'); })
+    .finally(function(){ showLoader(false); });
+}
 
 function showGeneraModal() {
   var now = new Date();
@@ -2839,19 +2934,22 @@ function renderCompitiOperatori() {
       html += '<tr><td><b>'+op.nome+'</b><br><small style="color:var(--gray3)">'+( op.ruolo||'')+'</small></td>';
       GIORNI.forEach(function(g) {
         var compiti = settCompiti.filter(function(c){ return c.operatore_id===op.id && c.giorno===g; });
-        html += '<td style="vertical-align:top;padding:4px">';
+        html += '<td style="vertical-align:top;padding:4px;min-width:90px">';
         compiti.forEach(function(c) {
           var tipo = S.compitiTipi.find(function(t){ return t.id===c.tipo_id; });
           var catColor = catCol(tipo ? tipo.categoria : '');
+          var nomeCompito = tipo ? tipo.nome : c.tipo_id;
           html += '<div style="background:'+catColor.bg+';color:'+catColor.fg+';border-radius:5px;' +
-            'padding:2px 6px;margin-bottom:3px;font-size:.72rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between" ' +
-            'title="'+(tipo?tipo.descrizione||'':'')+'" onclick="openCompitoForm(\x22'+c.id+'\x22)">' +
-            '<span>'+(tipo?tipo.nome:c.tipo_id)+'</span>' +
-            '<span onclick="event.stopPropagation();deleteCompito(\x22'+c.id+'\x22)" style="margin-left:4px;opacity:.6;font-size:.7rem">✕</span>' +
+            'padding:2px 6px;margin-bottom:3px;font-size:.72rem;display:flex;align-items:center;justify-content:space-between">' +
+            '<span style="flex:1">'+nomeCompito+'</span>' +
+            '<button data-cid="'+c.id+'" onclick="event.stopPropagation();deleteCompito(this.getAttribute('data-cid'))" ' +
+            'style="background:none;border:none;cursor:pointer;color:inherit;opacity:.7;font-size:.8rem;padding:0 2px;margin-left:4px">✕</button>' +
             '</div>';
         });
-        html += '<div style="font-size:.7rem;color:var(--sky);cursor:pointer;text-align:center;padding:2px" ' +
-          'onclick="openCompitoForm(null,\x22'+op.id+'\x22,\x22'+g+'\x22)">+ aggiungi</div>';
+        html += '<button data-opid="'+op.id+'" data-giorno="'+g+'" ' +
+          'onclick="openCompitoForm(null,this.getAttribute('data-opid'),this.getAttribute('data-giorno'))" ' +
+          'style="background:none;border:1px dashed var(--sky);color:var(--sky);border-radius:4px;' +
+          'font-size:.7rem;cursor:pointer;width:100%;padding:2px;margin-top:2px">+ aggiungi</button>';
         html += '</td>';
       });
       html += '</tr>';
