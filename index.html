@@ -2083,17 +2083,41 @@ function openCellaCalendarioModal(mansione, giorno) {
 
   var optsUtenti = S.utenti.map(function(u){ return {v:u.id+'|'+u.nome, l:u.nome}; });
 
-  var listaHtml = '<div style="margin-bottom:10px">';
+  var listaDiv = document.createElement('div');
+  listaDiv.style.marginBottom = '10px';
   if (assegnati.length === 0) {
-    listaHtml += '<p style="color:#999;font-size:.85rem">Nessun utente assegnato</p>';
+    var p = document.createElement('p');
+    p.style.cssText = 'color:#999;font-size:.85rem';
+    p.textContent = 'Nessun utente assegnato';
+    listaDiv.appendChild(p);
   } else {
     assegnati.forEach(function(a) {
-      listaHtml += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">' +
-        '<span style="flex:1;background:#f3f4f6;padding:4px 8px;border-radius:4px;font-weight:600;font-size:.85rem">' + a.nome + '</span>' +
-        '</div>';
+      var riga = document.createElement('div');
+      riga.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:4px';
+      var span = document.createElement('span');
+      span.style.cssText = 'flex:1;background:#f3f4f6;padding:4px 8px;border-radius:4px;font-weight:600;font-size:.85rem';
+      span.textContent = a.nome;
+      var btn = document.createElement('button');
+      btn.style.cssText = 'background:#FEE2E2;border:none;color:#C0392B;padding:3px 10px;border-radius:4px;cursor:pointer;font-weight:700';
+      btn.textContent = 'X';
+      btn.setAttribute('data-rid', a.id);
+      btn.setAttribute('data-rnome', a.nome);
+      btn.setAttribute('data-mans', mansione);
+      btn.setAttribute('data-giorno', giorno);
+      btn.onclick = function() {
+        rimuoviUtenteCalendario(
+          this.getAttribute('data-rid'),
+          this.getAttribute('data-rnome'),
+          this.getAttribute('data-mans'),
+          this.getAttribute('data-giorno')
+        );
+      };
+      riga.appendChild(span);
+      riga.appendChild(btn);
+      listaDiv.appendChild(riga);
     });
   }
-  listaHtml += '</div>';
+  var listaHtml = listaDiv.outerHTML;
 
   var bodyHtml = '<p style="margin-bottom:8px;font-size:.88rem"><b>' + mansione + '</b> — <b>' + giorno + '</b></p>' +
     '<p style="font-size:.8rem;color:#666;margin-bottom:6px">Utenti assegnati:</p>' +
@@ -2117,6 +2141,27 @@ function openCellaCalendarioModal(mansione, giorno) {
   footer.appendChild(btnChiudi);
   footer.appendChild(btnAggiungi);
   document.getElementById('modalOverlay').classList.add('open');
+}
+
+function rimuoviUtenteCalendario(utenteId, utenteNome, mansione, giorno) {
+  var gk = giorno.toLowerCase();
+  var riga = S.calendario.find(function(r){
+    return r.settimana_id === S.currentSettimana && r.utente_id === utenteId;
+  });
+  if (!riga) { toast('Utente non trovato nel calendario','error'); return; }
+  var valAttuale = riga[gk] || '';
+  // Rimuove la mansione dalla lista
+  var mansioni = valAttuale.split('|').filter(function(m){
+    return m.trim() && m.trim() !== mansione.trim();
+  });
+  riga[gk] = mansioni.join('|');
+  showLoader(true);
+  callApi('saveAssegnazione', riga).then(function(){
+    closeModal();
+    renderCalendario();
+    toast('Utente rimosso dalla mansione', 'success');
+  }).catch(function(e){ toast('Errore: '+e.message,'error'); })
+    .finally(function(){ showLoader(false); });
 }
 
 function aggiungiUtenteCalendario(mansione, giorno) {
